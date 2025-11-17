@@ -1,6 +1,10 @@
 fn main() {
+    let url: String = std::env::args()
+        .nth(1)
+        .expect("Arg with SubSonicVault URL required");
+
     let mpv_handler = LibMpvHandler::initialize_libmpv(50).unwrap();
-    mpv_handler.load_file("http://127.0.0.1:65421/").unwrap();
+    mpv_handler.load_file(&url).unwrap();
 
     loop {
         if let Ok(mut mpv_client) = mpv_handler.mpv.create_client(None) {
@@ -11,7 +15,7 @@ fn main() {
                 Ok(event) => match event {
                     libmpv2::events::Event::EndFile(0) => {
                         println!("Playing next file:");
-                        mpv_handler.load_file("http://127.0.0.1:65421/").unwrap();
+                        mpv_handler.load_file(&url).unwrap();
                     }
                     _ => println!("EV: {event:?}"),
                 },
@@ -39,7 +43,6 @@ impl LibMpvHandler {
     }
 
     pub fn load_file(&self, file: &str) -> Result<(), libmpv2::Error> {
-        self.mpv
-            .command("loadfile", &[format!("\"{file}\"").as_str(), "append-play"])
+        self.mpv.command("loadfile", &[file, "append-play"])
     }
 }
