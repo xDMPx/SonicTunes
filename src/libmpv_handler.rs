@@ -6,6 +6,7 @@ pub enum LibMpvMessage {
     UpdateVolume(i64),
     UpdatePosition(f64),
     PlayPause,
+    PlayNext,
 }
 
 #[derive(Debug)]
@@ -151,6 +152,12 @@ impl LibMpvHandler {
                     }
                     LibMpvMessage::PlayPause => {
                         self.mpv.command("cycle", &["pause"]).unwrap();
+                    }
+                    LibMpvMessage::PlayNext => {
+                        let audiofile = get_random_audiofile(&url);
+                        let audiofile_url = audiofile_to_url(&url, &audiofile);
+                        self.load_file(&audiofile_url).unwrap();
+                        self.mpv.command("playlist-next", &["force"]).unwrap();
                     }
                 }
             }
