@@ -1,6 +1,7 @@
 use rand::random_range;
 
 pub mod libmpv_handler;
+pub mod tui;
 
 #[derive(serde::Deserialize, Clone)]
 pub struct AudioFile {
