@@ -12,6 +12,7 @@ pub enum TuiCommand {
     Seek(f64),
     PlayPause,
     PlayNext,
+    PlayPrevious,
 }
 
 pub fn tui(
@@ -58,6 +59,10 @@ pub fn tui(
         (
             KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE),
             TuiCommand::PlayPause,
+        ),
+        (
+            KeyEvent::new(KeyCode::Char('z'), KeyModifiers::NONE),
+            TuiCommand::PlayPrevious,
         ),
         (
             KeyEvent::new(KeyCode::Char('b'), KeyModifiers::NONE),
@@ -127,6 +132,9 @@ pub fn tui(
                             }
                             TuiCommand::PlayNext => {
                                 libmpv_s.send(LibMpvMessage::PlayNext).unwrap();
+                            }
+                            TuiCommand::PlayPrevious => {
+                                libmpv_s.send(LibMpvMessage::PlayPrevious).unwrap();
                             }
                         }
                     }

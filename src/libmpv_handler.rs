@@ -7,6 +7,7 @@ pub enum LibMpvMessage {
     UpdatePosition(f64),
     PlayPause,
     PlayNext,
+    PlayPrevious,
 }
 
 #[derive(Debug)]
@@ -30,6 +31,7 @@ pub struct FileLoadedData {
 
 pub struct LibMpvHandler {
     mpv: libmpv2::Mpv,
+    playback_index: usize,
 }
 
 impl LibMpvHandler {
@@ -40,7 +42,10 @@ impl LibMpvHandler {
 
         mpv.disable_deprecated_events()?;
 
-        Ok(LibMpvHandler { mpv })
+        Ok(LibMpvHandler {
+            mpv,
+            playback_index: 0,
+        })
     }
 
     pub fn load_file(&self, file: &str) -> Result<(), libmpv2::Error> {
@@ -154,10 +159,21 @@ impl LibMpvHandler {
                         self.mpv.command("cycle", &["pause"]).unwrap();
                     }
                     LibMpvMessage::PlayNext => {
-                        let audiofile = get_random_audiofile(&url);
-                        let audiofile_url = audiofile_to_url(&url, &audiofile);
-                        self.load_file(&audiofile_url).unwrap();
+                        let pos = self
+                            .mpv
+                            .get_property::<i64>("playlist-playing-pos")
+                            .unwrap();
+                        let count = self.mpv.get_property::<i64>("playlist-count").unwrap();
+                        if pos == count - 1 {
+                            let audiofile = get_random_audiofile(&url);
+                            let audiofile_url = audiofile_to_url(&url, &audiofile);
+                            self.load_file(&audiofile_url).unwrap();
+                        }
+
                         self.mpv.command("playlist-next", &["force"]).unwrap();
+                    }
+                    LibMpvMessage::PlayPrevious => {
+                        self.mpv.command("playlist-prev", &["weak"]).unwrap();
                     }
                 }
             }
