@@ -31,7 +31,6 @@ pub struct FileLoadedData {
 
 pub struct LibMpvHandler {
     mpv: libmpv2::Mpv,
-    playback_index: usize,
 }
 
 impl LibMpvHandler {
@@ -42,10 +41,7 @@ impl LibMpvHandler {
 
         mpv.disable_deprecated_events()?;
 
-        Ok(LibMpvHandler {
-            mpv,
-            playback_index: 0,
-        })
+        Ok(LibMpvHandler { mpv })
     }
 
     pub fn load_file(&self, file: &str) -> Result<(), libmpv2::Error> {
@@ -67,6 +63,7 @@ impl LibMpvHandler {
         mut mpv_client: libmpv2::Mpv,
         url: &str,
         tui_s: crossbeam::channel::Sender<LibMpvEventMessage>,
+        mc_os_s: crossbeam::channel::Sender<LibMpvEventMessage>,
         libmpv_r: crossbeam::channel::Receiver<LibMpvMessage>,
     ) {
         loop {
@@ -78,10 +75,14 @@ impl LibMpvHandler {
                 Ok(event) => match event {
                     libmpv2::events::Event::StartFile => {
                         tui_s.send(LibMpvEventMessage::StartFile).unwrap();
+                        mc_os_s.send(LibMpvEventMessage::StartFile).unwrap();
                     }
                     libmpv2::events::Event::PlaybackRestart => {
                         let pause = self.mpv.get_property::<bool>("pause").unwrap();
                         tui_s
+                            .send(LibMpvEventMessage::PlaybackRestart(pause))
+                            .unwrap();
+                        mc_os_s
                             .send(LibMpvEventMessage::PlaybackRestart(pause))
                             .unwrap();
                     }
@@ -92,8 +93,10 @@ impl LibMpvHandler {
                     } => {
                         if pause {
                             tui_s.send(LibMpvEventMessage::PlaybackPause).unwrap();
+                            mc_os_s.send(LibMpvEventMessage::PlaybackPause).unwrap();
                         } else {
                             tui_s.send(LibMpvEventMessage::PlaybackResume).unwrap();
+                            mc_os_s.send(LibMpvEventMessage::PlaybackResume).unwrap();
                         }
                     }
                     libmpv2::events::Event::PropertyChange {
@@ -104,10 +107,16 @@ impl LibMpvHandler {
                         tui_s
                             .send(LibMpvEventMessage::VolumeUpdate(volume))
                             .unwrap();
+                        mc_os_s
+                            .send(LibMpvEventMessage::VolumeUpdate(volume))
+                            .unwrap();
                     }
                     libmpv2::events::Event::Seek => {
                         let time_pos = self.mpv.get_property::<f64>("time-pos/full").unwrap();
                         tui_s
+                            .send(LibMpvEventMessage::PositionUpdate(time_pos))
+                            .unwrap();
+                        mc_os_s
                             .send(LibMpvEventMessage::PositionUpdate(time_pos))
                             .unwrap();
                     }
@@ -122,6 +131,13 @@ impl LibMpvHandler {
                         tui_s
                             .send(LibMpvEventMessage::FileLoaded(FileLoadedData {
                                 media_title: media_title.clone(),
+                                duration,
+                                volume,
+                            }))
+                            .unwrap();
+                        mc_os_s
+                            .send(LibMpvEventMessage::FileLoaded(FileLoadedData {
+                                media_title,
                                 duration,
                                 volume,
                             }))
@@ -143,6 +159,7 @@ impl LibMpvHandler {
             if let Ok(msg) = libmpv_r.try_recv() {
                 match msg {
                     LibMpvMessage::Quit => {
+                        mc_os_s.send(LibMpvEventMessage::Quit).unwrap();
                         self.mpv.command("quit", &["0"]).unwrap();
                         break;
                     }

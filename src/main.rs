@@ -15,13 +15,19 @@ fn main() {
 
     let (tui_s, tui_r) = crossbeam::channel::unbounded();
     let (libmpv_s, libmpv_r) = crossbeam::channel::unbounded();
+    let (mc_tui_s, mc_tui_r) = crossbeam::channel::unbounded();
+
+    let mut mc_os_interface = sonictunes::mc_os_interface::MCOSInterface::new(libmpv_s.clone());
 
     crossbeam::scope(move |scope| {
         scope.spawn(move |_| {
             sonictunes::tui::tui(libmpv_s, tui_r);
         });
         scope.spawn(move |_| {
-            mpv_handler.run(mpv_client, &url, tui_s, libmpv_r);
+            mpv_handler.run(mpv_client, &url, tui_s, mc_tui_s, libmpv_r);
+        });
+        scope.spawn(move |_| {
+            mc_os_interface.handle_signals(mc_tui_r);
         });
     })
     .unwrap();
