@@ -5,6 +5,8 @@ pub enum LibMpvMessage {
     Quit,
     UpdateVolume(i64),
     UpdatePosition(f64),
+    Resume,
+    Pause,
     PlayPause,
     PlayNext,
     PlayPrevious,
@@ -174,6 +176,12 @@ impl LibMpvHandler {
                     }
                     LibMpvMessage::PlayPause => {
                         self.mpv.command("cycle", &["pause"]).unwrap();
+                    }
+                    LibMpvMessage::Resume => {
+                        self.mpv.set_property("pause", false).unwrap();
+                    }
+                    LibMpvMessage::Pause => {
+                        self.mpv.set_property("pause", true).unwrap();
                     }
                     LibMpvMessage::PlayNext => {
                         let pos = self
