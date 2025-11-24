@@ -129,7 +129,11 @@ impl LibMpvHandler {
                         let media_title = self
                             .mpv
                             .get_property::<libmpv2::MpvStr>("metadata/by-key/title")
-                            .unwrap()
+                            .unwrap_or_else(|_| {
+                                self.mpv
+                                    .get_property::<libmpv2::MpvStr>("media-title")
+                                    .unwrap()
+                            })
                             .to_string();
                         let duration = self.mpv.get_property::<f64>("duration/full").unwrap();
                         let volume = self.mpv.get_property::<i64>("volume").unwrap();
