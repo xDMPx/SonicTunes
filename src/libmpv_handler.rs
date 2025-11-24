@@ -73,6 +73,9 @@ impl LibMpvHandler {
                 .wait_event(0.016)
                 .unwrap_or(Err(libmpv2::Error::Null));
 
+            if ev.is_ok() {
+                log::debug!("Event {ev:?}");
+            }
             match ev {
                 Ok(event) => match event {
                     libmpv2::events::Event::StartFile => {
@@ -159,6 +162,7 @@ impl LibMpvHandler {
             }
 
             if let Ok(msg) = libmpv_r.try_recv() {
+                log::debug!("LibMpvMessage: {msg:?}");
                 match msg {
                     LibMpvMessage::Quit => {
                         mc_os_s.send(LibMpvEventMessage::Quit).unwrap();

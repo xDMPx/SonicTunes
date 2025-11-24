@@ -112,6 +112,7 @@ pub fn tui(
         if event::poll(std::time::Duration::from_millis(16)).unwrap() {
             let event = event::read();
             if let Ok(event) = event {
+                log::debug!("Event: {event:?}");
                 if let event::Event::Key(key) = event {
                     if let Some(command) = commands.get(&key) {
                         match command {
@@ -142,6 +143,7 @@ pub fn tui(
             }
         }
         if let Ok(rec) = tui_r.try_recv() {
+            log::debug!("LibMpvEventMessage: {rec:?}");
             match rec {
                 LibMpvEventMessage::StartFile => {
                     playback_ready = false;

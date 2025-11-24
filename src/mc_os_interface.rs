@@ -41,23 +41,26 @@ impl MCOSInterface {
 
         // The closure must be Send and have a static lifetime.
         media_controller
-            .attach(move |event: souvlaki::MediaControlEvent| match event {
-                souvlaki::MediaControlEvent::Play => {
-                    libmpv_s.send(LibMpvMessage::Resume).unwrap();
+            .attach(move |event: souvlaki::MediaControlEvent| {
+                log::debug!("MediaControlEvent: {event:?}");
+                match event {
+                    souvlaki::MediaControlEvent::Play => {
+                        libmpv_s.send(LibMpvMessage::Resume).unwrap();
+                    }
+                    souvlaki::MediaControlEvent::Pause => {
+                        libmpv_s.send(LibMpvMessage::Pause).unwrap();
+                    }
+                    souvlaki::MediaControlEvent::Previous => {
+                        libmpv_s.send(LibMpvMessage::PlayPrevious).unwrap();
+                    }
+                    souvlaki::MediaControlEvent::Next => {
+                        libmpv_s.send(LibMpvMessage::PlayNext).unwrap();
+                    }
+                    souvlaki::MediaControlEvent::Toggle => {
+                        libmpv_s.send(LibMpvMessage::PlayPause).unwrap();
+                    }
+                    _ => (),
                 }
-                souvlaki::MediaControlEvent::Pause => {
-                    libmpv_s.send(LibMpvMessage::Pause).unwrap();
-                }
-                souvlaki::MediaControlEvent::Previous => {
-                    libmpv_s.send(LibMpvMessage::PlayPrevious).unwrap();
-                }
-                souvlaki::MediaControlEvent::Next => {
-                    libmpv_s.send(LibMpvMessage::PlayNext).unwrap();
-                }
-                souvlaki::MediaControlEvent::Toggle => {
-                    libmpv_s.send(LibMpvMessage::PlayPause).unwrap();
-                }
-                _ => (),
             })
             .unwrap();
 
@@ -78,6 +81,7 @@ impl MCOSInterface {
         loop {
             std::thread::sleep(std::time::Duration::from_millis(16));
             if let Ok(rec) = tui_r.try_recv() {
+                log::debug!("LibMpvEventMessage: {rec:?}");
                 match rec {
                     LibMpvEventMessage::StartFile => {
                         self.media_controller
