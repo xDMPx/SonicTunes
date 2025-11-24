@@ -87,11 +87,11 @@ impl MCOSInterface {
                     LibMpvEventMessage::PlaybackRestart(paused) => {
                         if paused {
                             self.media_controller
-                                .set_playback(souvlaki::MediaPlayback::Playing { progress: None })
+                                .set_playback(souvlaki::MediaPlayback::Paused { progress: None })
                                 .unwrap();
                         } else {
                             self.media_controller
-                                .set_playback(souvlaki::MediaPlayback::Paused { progress: None })
+                                .set_playback(souvlaki::MediaPlayback::Playing { progress: None })
                                 .unwrap();
                         }
                     }
