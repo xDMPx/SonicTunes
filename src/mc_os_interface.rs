@@ -59,6 +59,11 @@ impl MCOSInterface {
                     souvlaki::MediaControlEvent::Toggle => {
                         libmpv_s.send(LibMpvMessage::PlayPause).unwrap();
                     }
+                    souvlaki::MediaControlEvent::SetVolume(vol) => {
+                        libmpv_s
+                            .send(LibMpvMessage::SetVolume((vol * 100.0).floor() as i64))
+                            .unwrap();
+                    }
                     _ => (),
                 }
             })
@@ -120,7 +125,11 @@ impl MCOSInterface {
                             .set_playback(souvlaki::MediaPlayback::Playing { progress: None })
                             .unwrap();
                     }
-                    LibMpvEventMessage::VolumeUpdate(_) => (),
+                    LibMpvEventMessage::VolumeUpdate(vol) => {
+                        self.media_controller
+                            .set_volume((vol as f64) / 100.0)
+                            .unwrap();
+                    }
                     LibMpvEventMessage::PositionUpdate(_) => (),
                     LibMpvEventMessage::DurationUpdate(_) => (),
                     LibMpvEventMessage::Quit => {

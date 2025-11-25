@@ -4,6 +4,7 @@ use crate::{audiofile_to_url, get_random_audiofile};
 pub enum LibMpvMessage {
     Quit,
     UpdateVolume(i64),
+    SetVolume(i64),
     UpdatePosition(f64),
     Resume,
     Pause,
@@ -192,6 +193,9 @@ impl LibMpvHandler {
                         volume += vol;
                         volume = volume.clamp(0, 200);
                         self.mpv.set_property("volume", volume).unwrap();
+                    }
+                    LibMpvMessage::SetVolume(vol) => {
+                        self.mpv.set_property("volume", vol).unwrap();
                     }
                     LibMpvMessage::UpdatePosition(offset) => {
                         self.mpv.command("seek", &[&offset.to_string()]).unwrap();
