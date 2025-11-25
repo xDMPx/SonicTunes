@@ -64,6 +64,15 @@ impl MCOSInterface {
                             .send(LibMpvMessage::SetVolume((vol * 100.0).floor() as i64))
                             .unwrap();
                     }
+                    souvlaki::MediaControlEvent::SeekBy(direction, duration) => {
+                        let offset = match direction {
+                            souvlaki::SeekDirection::Forward => duration.as_secs_f64(),
+                            souvlaki::SeekDirection::Backward => -duration.as_secs_f64(),
+                        };
+                        libmpv_s
+                            .send(LibMpvMessage::UpdatePosition(offset))
+                            .unwrap();
+                    }
                     _ => (),
                 }
             })
