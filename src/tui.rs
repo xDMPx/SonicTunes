@@ -175,6 +175,9 @@ pub fn tui(
                     playback_start = std::time::SystemTime::now();
                     playback_start_offset = pos;
                 }
+                LibMpvEventMessage::DurationUpdate(dur) => {
+                    playback_duration = dur.floor() as u64;
+                }
                 LibMpvEventMessage::Quit => (),
             }
         }

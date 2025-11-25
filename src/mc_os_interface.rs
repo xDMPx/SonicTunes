@@ -122,6 +122,7 @@ impl MCOSInterface {
                     }
                     LibMpvEventMessage::VolumeUpdate(_) => (),
                     LibMpvEventMessage::PositionUpdate(_) => (),
+                    LibMpvEventMessage::DurationUpdate(_) => (),
                     LibMpvEventMessage::Quit => {
                         break;
                     }

@@ -21,6 +21,7 @@ pub enum LibMpvEventMessage {
     FileLoaded(FileLoadedData),
     VolumeUpdate(i64),
     PositionUpdate(f64),
+    DurationUpdate(f64),
     Quit,
 }
 
@@ -56,6 +57,7 @@ impl LibMpvHandler {
 
         client.observe_property("pause", libmpv2::Format::Flag, 0)?;
         client.observe_property("volume", libmpv2::Format::Int64, 0)?;
+        client.observe_property("duration/full", libmpv2::Format::Double, 0)?;
 
         Ok(client)
     }
@@ -114,6 +116,18 @@ impl LibMpvHandler {
                             .unwrap();
                         mc_os_s
                             .send(LibMpvEventMessage::VolumeUpdate(volume))
+                            .unwrap();
+                    }
+                    libmpv2::events::Event::PropertyChange {
+                        name: "duration/full",
+                        change: libmpv2::events::PropertyData::Double(duration),
+                        ..
+                    } => {
+                        tui_s
+                            .send(LibMpvEventMessage::DurationUpdate(duration))
+                            .unwrap();
+                        mc_os_s
+                            .send(LibMpvEventMessage::DurationUpdate(duration))
                             .unwrap();
                     }
                     libmpv2::events::Event::Seek => {
