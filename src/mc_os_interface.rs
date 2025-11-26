@@ -95,6 +95,12 @@ impl MCOSInterface {
         tui_r: crossbeam::channel::Receiver<crate::libmpv_handler::LibMpvEventMessage>,
     ) {
         let mut title = String::new();
+        let mut playback_start = std::time::SystemTime::now();
+        let mut playback_start_offset = 0.0;
+        let mut playback_paused = true;
+        let mut playback_ready = false;
+
+        let mut update_playback_timer = std::time::SystemTime::now();
 
         self.media_controller
             .set_playback(souvlaki::MediaPlayback::Playing { progress: None })
@@ -105,25 +111,16 @@ impl MCOSInterface {
                 log::debug!("LibMpvEventMessage: {rec:?}");
                 match rec {
                     LibMpvEventMessage::StartFile => {
-                        self.media_controller
-                            .set_playback(souvlaki::MediaPlayback::Playing { progress: None })
-                            .unwrap();
+                        playback_ready = false;
                     }
                     LibMpvEventMessage::PlaybackRestart(paused) => {
-                        if paused {
-                            self.media_controller
-                                .set_playback(souvlaki::MediaPlayback::Paused { progress: None })
-                                .unwrap();
-                        } else {
-                            self.media_controller
-                                .set_playback(souvlaki::MediaPlayback::Playing { progress: None })
-                                .unwrap();
-                        }
+                        playback_start = std::time::SystemTime::now();
+                        playback_ready = true;
+                        playback_paused = paused;
                     }
                     LibMpvEventMessage::FileLoaded(data) => {
-                        self.media_controller
-                            .set_playback(souvlaki::MediaPlayback::Playing { progress: None })
-                            .unwrap();
+                        playback_start = std::time::SystemTime::now();
+                        playback_start_offset = 0.0;
                         self.media_controller
                             .set_metadata(souvlaki::MediaMetadata {
                                 title: Some(&data.media_title),
@@ -133,14 +130,12 @@ impl MCOSInterface {
                         title = data.media_title;
                     }
                     LibMpvEventMessage::PlaybackPause => {
-                        self.media_controller
-                            .set_playback(souvlaki::MediaPlayback::Paused { progress: None })
-                            .unwrap();
+                        playback_start_offset += playback_start.elapsed().unwrap().as_secs_f64();
+                        playback_paused = true;
                     }
                     LibMpvEventMessage::PlaybackResume => {
-                        self.media_controller
-                            .set_playback(souvlaki::MediaPlayback::Playing { progress: None })
-                            .unwrap();
+                        playback_start = std::time::SystemTime::now();
+                        playback_paused = false;
                     }
                     LibMpvEventMessage::VolumeUpdate(vol) => {
                         #[cfg(target_os = "linux")]
@@ -148,7 +143,10 @@ impl MCOSInterface {
                             .set_volume((vol as f64) / 100.0)
                             .unwrap();
                     }
-                    LibMpvEventMessage::PositionUpdate(_) => (),
+                    LibMpvEventMessage::PositionUpdate(pos) => {
+                        playback_start = std::time::SystemTime::now();
+                        playback_start_offset = pos;
+                    }
                     LibMpvEventMessage::DurationUpdate(dur) => {
                         self.media_controller
                             .set_metadata(souvlaki::MediaMetadata {
@@ -161,6 +159,36 @@ impl MCOSInterface {
                     LibMpvEventMessage::Quit => {
                         break;
                     }
+                }
+            }
+
+            if update_playback_timer.elapsed().unwrap().as_secs_f64() > 0.5 {
+                update_playback_timer = std::time::SystemTime::now();
+                let playback_time = {
+                    if !playback_ready {
+                        0.0
+                    } else if playback_paused {
+                        playback_start_offset
+                    } else {
+                        playback_start_offset + playback_start.elapsed().unwrap().as_secs_f64()
+                    }
+                };
+                if playback_paused {
+                    self.media_controller
+                        .set_playback(souvlaki::MediaPlayback::Paused {
+                            progress: Some(souvlaki::MediaPosition(
+                                std::time::Duration::from_secs_f64(playback_time),
+                            )),
+                        })
+                        .unwrap();
+                } else {
+                    self.media_controller
+                        .set_playback(souvlaki::MediaPlayback::Playing {
+                            progress: Some(souvlaki::MediaPosition(
+                                std::time::Duration::from_secs_f64(playback_time),
+                            )),
+                        })
+                        .unwrap();
                 }
             }
         }
