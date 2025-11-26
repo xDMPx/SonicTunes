@@ -94,6 +94,8 @@ impl MCOSInterface {
         &mut self,
         tui_r: crossbeam::channel::Receiver<crate::libmpv_handler::LibMpvEventMessage>,
     ) {
+        let mut title = String::new();
+
         self.media_controller
             .set_playback(souvlaki::MediaPlayback::Playing { progress: None })
             .unwrap();
@@ -128,6 +130,7 @@ impl MCOSInterface {
                                 ..Default::default()
                             })
                             .unwrap();
+                        title = data.media_title;
                     }
                     LibMpvEventMessage::PlaybackPause => {
                         self.media_controller
@@ -145,7 +148,15 @@ impl MCOSInterface {
                             .unwrap();
                     }
                     LibMpvEventMessage::PositionUpdate(_) => (),
-                    LibMpvEventMessage::DurationUpdate(_) => (),
+                    LibMpvEventMessage::DurationUpdate(dur) => {
+                        self.media_controller
+                            .set_metadata(souvlaki::MediaMetadata {
+                                title: Some(&title),
+                                duration: Some(std::time::Duration::from_secs_f64(dur)),
+                                ..Default::default()
+                            })
+                            .unwrap();
+                    }
                     LibMpvEventMessage::Quit => {
                         break;
                     }
