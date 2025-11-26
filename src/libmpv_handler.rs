@@ -6,6 +6,7 @@ pub enum LibMpvMessage {
     UpdateVolume(i64),
     SetVolume(i64),
     UpdatePosition(f64),
+    SetPosition(f64),
     Resume,
     Pause,
     PlayPause,
@@ -193,6 +194,11 @@ impl LibMpvHandler {
                         volume += vol;
                         volume = volume.clamp(0, 200);
                         self.mpv.set_property("volume", volume).unwrap();
+                    }
+                    LibMpvMessage::SetPosition(pos) => {
+                        self.mpv
+                            .command("seek", &[&pos.to_string(), "absolute"])
+                            .unwrap();
                     }
                     LibMpvMessage::SetVolume(vol) => {
                         self.mpv.set_property("volume", vol).unwrap();
