@@ -143,6 +143,7 @@ impl MCOSInterface {
                             .unwrap();
                     }
                     LibMpvEventMessage::VolumeUpdate(vol) => {
+                        #[cfg(target_os = "linux")]
                         self.media_controller
                             .set_volume((vol as f64) / 100.0)
                             .unwrap();
