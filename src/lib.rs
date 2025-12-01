@@ -11,6 +11,54 @@ pub struct AudioFile {
     pub mime: String,
 }
 
+#[derive(PartialEq)]
+pub enum ProgramOption {
+    URL(String),
+    PrintHelp,
+}
+
+#[derive(Debug)]
+pub enum Error {
+    InvalidOption(String),
+    InvalidOptionsStructure,
+}
+
+pub fn process_args() -> Result<Vec<ProgramOption>, Error> {
+    let mut options = vec![];
+    let mut args: Vec<String> = std::env::args().skip(1).collect();
+
+    let last_arg = args.pop().ok_or(Error::InvalidOptionsStructure)?;
+    if last_arg != "--help" {
+        let url = last_arg;
+        if !url.starts_with("http") {
+            return Err(Error::InvalidOptionsStructure);
+        }
+        options.push(ProgramOption::URL(url));
+    } else {
+        args.push(last_arg);
+    }
+
+    for arg in args {
+        let arg = match arg.as_str() {
+            "--help" => Ok(ProgramOption::PrintHelp),
+            _ => Err(Error::InvalidOption(arg)),
+        };
+        options.push(arg?);
+    }
+
+    Ok(options)
+}
+
+pub fn print_help() {
+    println!(
+        "Usage: {} [OPTIONS] SUBSONICVAULT_URL",
+        env!("CARGO_PKG_NAME")
+    );
+    println!("       {} --help", env!("CARGO_PKG_NAME"));
+    println!("Options:");
+    println!("\t --help");
+}
+
 #[inline(always)]
 pub fn get_reqwest_client() -> reqwest::Result<reqwest::blocking::Client> {
     let user_agent: String = format!("{}/{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));

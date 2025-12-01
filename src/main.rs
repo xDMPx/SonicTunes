@@ -1,4 +1,7 @@
-use sonictunes::{audiofile_to_url, get_random_audiofile, libmpv_handler::LibMpvHandler};
+use sonictunes::{
+    ProgramOption, audiofile_to_url, get_random_audiofile, libmpv_handler::LibMpvHandler,
+    print_help, process_args,
+};
 
 fn main() {
     simplelog::WriteLogger::init(
@@ -7,12 +10,32 @@ fn main() {
         std::fs::File::create("debug.log").unwrap(),
     )
     .unwrap();
-
     log::debug!("Args: {:?}", std::env::args());
 
-    let url: String = std::env::args()
-        .nth(1)
-        .expect("Arg with SubSonicVault URL required");
+    let options = process_args()
+        .map_err(|err| {
+            match err {
+                sonictunes::Error::InvalidOption(option) => {
+                    eprintln!("Provided option {option} is invalid")
+                }
+                sonictunes::Error::InvalidOptionsStructure => eprintln!("Invalid input"),
+            }
+            print_help();
+            std::process::exit(-1);
+        })
+        .unwrap();
+    if options.contains(&ProgramOption::PrintHelp) {
+        print_help();
+        std::process::exit(-1);
+    }
+
+    let url = options
+        .iter()
+        .find_map(|o| match o {
+            ProgramOption::URL(url) => Some(url),
+            _ => None,
+        })
+        .unwrap();
     log::debug!("URL: {:?}", std::env::args());
 
     let mut mpv_handler = LibMpvHandler::initialize_libmpv(50).unwrap();
