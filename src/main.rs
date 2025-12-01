@@ -29,6 +29,15 @@ fn main() {
         std::process::exit(-1);
     }
 
+    let volume = if let Some(vol) = options.iter().find_map(|o| match o {
+        ProgramOption::Volume(vol) => Some(*vol),
+        _ => None,
+    }) {
+        vol
+    } else {
+        50
+    };
+
     let url = options
         .iter()
         .find_map(|o| match o {
@@ -38,7 +47,7 @@ fn main() {
         .unwrap();
     log::debug!("URL: {:?}", std::env::args());
 
-    let mut mpv_handler = LibMpvHandler::initialize_libmpv(50).unwrap();
+    let mut mpv_handler = LibMpvHandler::initialize_libmpv(volume).unwrap();
     let mpv_client = mpv_handler.create_client().unwrap();
 
     let audiofile = get_random_audiofile(&url);

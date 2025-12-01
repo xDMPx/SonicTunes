@@ -15,6 +15,7 @@ pub struct AudioFile {
 pub enum ProgramOption {
     URL(String),
     PrintHelp,
+    Volume(i64),
 }
 
 #[derive(Debug)]
@@ -41,6 +42,17 @@ pub fn process_args() -> Result<Vec<ProgramOption>, Error> {
     for arg in args {
         let arg = match arg.as_str() {
             "--help" => Ok(ProgramOption::PrintHelp),
+            s if s.starts_with("--volume=") => {
+                if let Some(Ok(vol)) = s.split_once('=').map(|(_, s)| s.parse::<i8>()) {
+                    if vol >= 0 && vol <= 100 {
+                        Ok(ProgramOption::Volume(vol.into()))
+                    } else {
+                        Err(Error::InvalidOption(arg))
+                    }
+                } else {
+                    Err(Error::InvalidOption(arg))
+                }
+            }
             _ => Err(Error::InvalidOption(arg)),
         };
         options.push(arg?);
@@ -56,6 +68,7 @@ pub fn print_help() {
     );
     println!("       {} --help", env!("CARGO_PKG_NAME"));
     println!("Options:");
+    println!("\t --volume=<value>\t(0..100)");
     println!("\t --help");
 }
 
