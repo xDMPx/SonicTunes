@@ -71,6 +71,7 @@ pub fn tui(
     ]);
 
     let mut title = String::new();
+    let mut artist: Option<String> = None;
     let mut terminal = ratatui::init();
 
     let mut playback_start = std::time::SystemTime::now();
@@ -100,6 +101,10 @@ pub fn tui(
             }
         };
         let mut to_draw = title.clone();
+        if let Some(ref artist) = artist {
+            to_draw.push_str(" by ");
+            to_draw.push_str(artist);
+        }
         to_draw.push_str(&format!(
             "\n{} {} / {} vol: {}",
             symbol,
@@ -159,6 +164,7 @@ pub fn tui(
                     playback_duration = data.duration.floor() as u64;
                     playback_volume = data.volume;
                     title = data.media_title;
+                    artist = data.artist;
                 }
                 LibMpvEventMessage::PlaybackPause => {
                     playback_start_offset += playback_start.elapsed().unwrap().as_secs_f64();

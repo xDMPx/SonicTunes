@@ -95,6 +95,7 @@ impl MCOSInterface {
         tui_r: crossbeam::channel::Receiver<crate::libmpv_handler::LibMpvEventMessage>,
     ) {
         let mut title = String::new();
+        let mut artist: Option<String> = None;
         let mut playback_start = std::time::SystemTime::now();
         let mut playback_start_offset = 0.0;
         let mut playback_paused = true;
@@ -124,10 +125,12 @@ impl MCOSInterface {
                         self.media_controller
                             .set_metadata(souvlaki::MediaMetadata {
                                 title: Some(&data.media_title),
+                                artist: data.artist.as_deref(),
                                 ..Default::default()
                             })
                             .unwrap();
                         title = data.media_title;
+                        artist = data.artist;
                     }
                     LibMpvEventMessage::PlaybackPause => {
                         playback_start_offset += playback_start.elapsed().unwrap().as_secs_f64();
@@ -151,6 +154,7 @@ impl MCOSInterface {
                         self.media_controller
                             .set_metadata(souvlaki::MediaMetadata {
                                 title: Some(&title),
+                                artist: artist.as_deref(),
                                 duration: Some(std::time::Duration::from_secs_f64(dur)),
                                 ..Default::default()
                             })

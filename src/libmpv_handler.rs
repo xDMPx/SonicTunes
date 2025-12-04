@@ -30,6 +30,7 @@ pub enum LibMpvEventMessage {
 #[derive(Debug)]
 pub struct FileLoadedData {
     pub media_title: String,
+    pub artist: Option<String>,
     pub duration: f64,
     pub volume: i64,
 }
@@ -151,11 +152,17 @@ impl LibMpvHandler {
                                     .unwrap()
                             })
                             .to_string();
+                        let artist = self
+                            .mpv
+                            .get_property::<libmpv2::MpvStr>("metadata/by-key/artist")
+                            .map(|s| Some(s.to_string()))
+                            .unwrap_or_else(|_| None);
                         let duration = self.mpv.get_property::<f64>("duration/full").unwrap();
                         let volume = self.mpv.get_property::<i64>("volume").unwrap();
                         tui_s
                             .send(LibMpvEventMessage::FileLoaded(FileLoadedData {
                                 media_title: media_title.clone(),
+                                artist: artist.clone(),
                                 duration,
                                 volume,
                             }))
@@ -163,6 +170,7 @@ impl LibMpvHandler {
                         mc_os_s
                             .send(LibMpvEventMessage::FileLoaded(FileLoadedData {
                                 media_title,
+                                artist,
                                 duration,
                                 volume,
                             }))
