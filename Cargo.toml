@@ -13,7 +13,7 @@ reqwest = { version = "0.12.24", features = ["blocking", "json"] }
 serde = "1.0.228"
 serde_json = "1.0.145"
 simplelog = "0.12.2"
-souvlaki = "0.8.3"
+souvlaki = { version = "0.8.3", default-features = false, features = ["use_zbus"] }
 
 [target.'cfg(windows)'.dependencies]
 windows-async = "0.2.1"
