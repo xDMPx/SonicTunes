@@ -6,7 +6,7 @@ pub mod tui;
 
 #[derive(serde::Deserialize, Clone)]
 pub struct AudioFile {
-    pub id: u64,
+    pub id: String,
     pub path: String,
     pub mime: String,
 }
