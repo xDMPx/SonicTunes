@@ -96,6 +96,7 @@ impl MCOSInterface {
     ) {
         let mut title = String::new();
         let mut artist: Option<String> = None;
+        let mut album: Option<String> = None;
         let mut playback_start = std::time::SystemTime::now();
         let mut playback_start_offset = 0.0;
         let mut playback_paused = true;
@@ -126,11 +127,13 @@ impl MCOSInterface {
                             .set_metadata(souvlaki::MediaMetadata {
                                 title: Some(&data.media_title),
                                 artist: data.artist.as_deref(),
+                                album: data.album.as_deref(),
                                 ..Default::default()
                             })
                             .unwrap();
                         title = data.media_title;
                         artist = data.artist;
+                        album = data.album;
                     }
                     LibMpvEventMessage::PlaybackPause => {
                         playback_start_offset += playback_start.elapsed().unwrap().as_secs_f64();
@@ -155,6 +158,7 @@ impl MCOSInterface {
                             .set_metadata(souvlaki::MediaMetadata {
                                 title: Some(&title),
                                 artist: artist.as_deref(),
+                                album: album.as_deref(),
                                 duration: Some(std::time::Duration::from_secs_f64(dur)),
                                 ..Default::default()
                             })
