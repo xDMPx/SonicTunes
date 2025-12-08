@@ -247,7 +247,13 @@ impl LibMpvHandler {
                         self.mpv.command("playlist-next", &["force"]).unwrap();
                     }
                     LibMpvMessage::PlayPrevious => {
-                        self.mpv.command("playlist-prev", &["weak"]).unwrap();
+                        if let Err(err) = self.mpv.command("playlist-prev", &["weak"]) {
+                            if err != libmpv2::Error::Raw(-12) {
+                                panic!("{err:?}");
+                            } else {
+                                self.mpv.command("seek", &["0", "absolute"]).unwrap();
+                            }
+                        }
                     }
                 }
             }
