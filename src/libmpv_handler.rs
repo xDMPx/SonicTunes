@@ -233,18 +233,23 @@ impl LibMpvHandler {
                         self.mpv.set_property("pause", true).unwrap();
                     }
                     LibMpvMessage::PlayNext => {
-                        let pos = self
-                            .mpv
-                            .get_property::<i64>("playlist-playing-pos")
-                            .unwrap();
-                        let count = self.mpv.get_property::<i64>("playlist-count").unwrap();
-                        if pos == count - 1 {
-                            let audiofile = get_random_audiofile(&url);
-                            let audiofile_url = audiofile_to_url(&url, &audiofile);
-                            self.load_file(&audiofile_url).unwrap();
+                        if let Err(err) = self.mpv.command("playlist-next", &["weak"]) {
+                            if err != libmpv2::Error::Raw(-12) {
+                                panic!("{err:?}");
+                            } else {
+                                let pos = self
+                                    .mpv
+                                    .get_property::<i64>("playlist-playing-pos")
+                                    .unwrap();
+                                let count = self.mpv.get_property::<i64>("playlist-count").unwrap();
+                                if pos == count - 1 {
+                                    let audiofile = get_random_audiofile(&url);
+                                    let audiofile_url = audiofile_to_url(&url, &audiofile);
+                                    self.load_file(&audiofile_url).unwrap();
+                                }
+                                self.mpv.command("playlist-next", &["force"]).unwrap();
+                            }
                         }
-
-                        self.mpv.command("playlist-next", &["force"]).unwrap();
                     }
                     LibMpvMessage::PlayPrevious => {
                         if let Err(err) = self.mpv.command("playlist-prev", &["weak"]) {
