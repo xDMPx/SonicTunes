@@ -23,6 +23,13 @@ pub enum ProgramOption {
 pub enum Error {
     InvalidOption(String),
     InvalidOptionsStructure,
+    ReqwestError(reqwest::Error),
+}
+
+impl From<reqwest::Error> for Error {
+    fn from(err: reqwest::Error) -> Self {
+        Error::ReqwestError(err)
+    }
 }
 
 pub fn process_args() -> Result<Vec<ProgramOption>, Error> {
@@ -97,14 +104,14 @@ pub fn reqwest_get(url: &str) -> reqwest::Result<reqwest::blocking::Response> {
     Ok(response)
 }
 
-pub fn get_random_audiofile(url: &str) -> AudioFile {
+pub fn get_random_audiofile(url: &str) -> Result<AudioFile, Error> {
     let mut url_files = url.trim_end_matches('/').to_string();
     url_files.push_str("/files");
-    let files_response = reqwest_get(&url_files).unwrap();
-    let audiofiles = files_response.json::<Vec<AudioFile>>().unwrap();
+    let files_response = reqwest_get(&url_files)?;
+    let audiofiles = files_response.json::<Vec<AudioFile>>()?;
     let id = random_range(0..audiofiles.len());
 
-    audiofiles[id].clone()
+    Ok(audiofiles[id].clone())
 }
 
 pub fn audiofile_to_url(url: &str, audiofile: &AudioFile) -> String {

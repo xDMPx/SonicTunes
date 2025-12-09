@@ -186,7 +186,7 @@ impl LibMpvHandler {
                             .unwrap();
                     }
                     libmpv2::events::Event::EndFile(0) => {
-                        let audiofile = get_random_audiofile(&url);
+                        let audiofile = get_random_audiofile(&url).unwrap();
                         let audiofile_url = audiofile_to_url(&url, &audiofile);
                         self.load_file(&audiofile_url).unwrap();
                     }
@@ -243,7 +243,7 @@ impl LibMpvHandler {
                                     .unwrap();
                                 let count = self.mpv.get_property::<i64>("playlist-count").unwrap();
                                 if pos == count - 1 {
-                                    let audiofile = get_random_audiofile(&url);
+                                    let audiofile = get_random_audiofile(&url).unwrap();
                                     let audiofile_url = audiofile_to_url(&url, &audiofile);
                                     self.load_file(&audiofile_url).unwrap();
                                 }

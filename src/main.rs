@@ -11,6 +11,7 @@ fn main() {
                     eprintln!("Provided option {option} is invalid")
                 }
                 sonictunes::Error::InvalidOptionsStructure => eprintln!("Invalid input"),
+                _ => panic!("{:?}", err),
             }
             print_help();
             std::process::exit(-1);
@@ -52,7 +53,7 @@ fn main() {
     let mut mpv_handler = LibMpvHandler::initialize_libmpv(volume).unwrap();
     let mpv_client = mpv_handler.create_client().unwrap();
 
-    let audiofile = get_random_audiofile(&url);
+    let audiofile = get_random_audiofile(&url).unwrap();
     log::debug!("Playing: {}", audiofile.path);
     let audiofile_url = audiofile_to_url(&url, &audiofile);
     mpv_handler.load_file(&audiofile_url).unwrap();
