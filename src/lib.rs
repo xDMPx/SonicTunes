@@ -20,27 +20,27 @@ pub enum ProgramOption {
 }
 
 #[derive(Debug)]
-pub enum Error {
+pub enum SonicTunesError {
     InvalidOption(String),
     InvalidOptionsStructure,
     ReqwestError(reqwest::Error),
 }
 
-impl From<reqwest::Error> for Error {
+impl From<reqwest::Error> for SonicTunesError {
     fn from(err: reqwest::Error) -> Self {
-        Error::ReqwestError(err)
+        SonicTunesError::ReqwestError(err)
     }
 }
 
-pub fn process_args() -> Result<Vec<ProgramOption>, Error> {
+pub fn process_args() -> Result<Vec<ProgramOption>, SonicTunesError> {
     let mut options = vec![];
     let mut args: Vec<String> = std::env::args().skip(1).collect();
 
-    let last_arg = args.pop().ok_or(Error::InvalidOptionsStructure)?;
+    let last_arg = args.pop().ok_or(SonicTunesError::InvalidOptionsStructure)?;
     if last_arg != "--help" {
         let url = last_arg;
         if !url.starts_with("http") {
-            return Err(Error::InvalidOptionsStructure);
+            return Err(SonicTunesError::InvalidOptionsStructure);
         }
         options.push(ProgramOption::URL(url));
     } else {
@@ -56,13 +56,13 @@ pub fn process_args() -> Result<Vec<ProgramOption>, Error> {
                     if vol >= 0 && vol <= 100 {
                         Ok(ProgramOption::Volume(vol.into()))
                     } else {
-                        Err(Error::InvalidOption(arg))
+                        Err(SonicTunesError::InvalidOption(arg))
                     }
                 } else {
-                    Err(Error::InvalidOption(arg))
+                    Err(SonicTunesError::InvalidOption(arg))
                 }
             }
-            _ => Err(Error::InvalidOption(arg)),
+            _ => Err(SonicTunesError::InvalidOption(arg)),
         };
         options.push(arg?);
     }
@@ -104,7 +104,7 @@ pub fn reqwest_get(url: &str) -> reqwest::Result<reqwest::blocking::Response> {
     Ok(response)
 }
 
-pub fn get_random_audiofile(url: &str) -> Result<AudioFile, Error> {
+pub fn get_random_audiofile(url: &str) -> Result<AudioFile, SonicTunesError> {
     let mut url_files = url.trim_end_matches('/').to_string();
     url_files.push_str("/files");
     let files_response = reqwest_get(&url_files)?;

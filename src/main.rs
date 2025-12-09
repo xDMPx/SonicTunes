@@ -7,10 +7,10 @@ fn main() {
     let options = process_args()
         .map_err(|err| {
             match err {
-                sonictunes::Error::InvalidOption(option) => {
+                sonictunes::SonicTunesError::InvalidOption(option) => {
                     eprintln!("Provided option {option} is invalid")
                 }
-                sonictunes::Error::InvalidOptionsStructure => eprintln!("Invalid input"),
+                sonictunes::SonicTunesError::InvalidOptionsStructure => eprintln!("Invalid input"),
                 _ => panic!("{:?}", err),
             }
             print_help();
