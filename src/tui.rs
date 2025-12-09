@@ -8,6 +8,7 @@ use ratatui::{
 
 #[derive(Debug)]
 pub enum TuiCommand {
+    State(TuiState),
     Quit,
     Volume(i64),
     Seek(f64),
@@ -16,11 +17,25 @@ pub enum TuiCommand {
     PlayPrevious,
 }
 
+#[derive(Debug, Clone)]
+pub enum TuiState {
+    Player,
+    History,
+}
+
 pub fn tui(
     libmpv_s: crossbeam::channel::Sender<LibMpvMessage>,
     tui_r: crossbeam::channel::Receiver<LibMpvEventMessage>,
 ) -> Result<(), SonicTunesError> {
     let commands = std::collections::HashMap::from([
+        (
+            KeyEvent::new(KeyCode::Char('1'), KeyModifiers::NONE),
+            TuiCommand::State(TuiState::Player),
+        ),
+        (
+            KeyEvent::new(KeyCode::Char('2'), KeyModifiers::NONE),
+            TuiCommand::State(TuiState::History),
+        ),
         (
             KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE),
             TuiCommand::Quit,
@@ -70,10 +85,13 @@ pub fn tui(
             TuiCommand::PlayNext,
         ),
     ]);
+    let mut tui_state = TuiState::Player;
 
     let mut title = String::new();
     let mut artist: Option<String> = None;
     let mut terminal = ratatui::init();
+
+    let mut history: Vec<String> = Vec::new();
 
     let mut playback_start = std::time::SystemTime::now();
     let mut playback_start_offset = 0.0;
@@ -83,37 +101,48 @@ pub fn tui(
     let mut playback_volume = 0;
 
     loop {
-        let playback_time = {
-            if !playback_ready {
-                0.0
-            } else if playback_paused {
-                playback_start_offset
-            } else {
-                playback_start_offset + playback_start.elapsed()?.as_secs_f64()
+        match tui_state {
+            TuiState::Player => {
+                let playback_time = {
+                    if !playback_ready {
+                        0.0
+                    } else if playback_paused {
+                        playback_start_offset
+                    } else {
+                        playback_start_offset + playback_start.elapsed()?.as_secs_f64()
+                    }
+                };
+                let mut playback_time = playback_time.floor() as u64;
+                playback_time = playback_time.min(playback_duration);
+                let symbol = {
+                    if !playback_ready || playback_paused {
+                        "|"
+                    } else {
+                        ">"
+                    }
+                };
+                let mut to_draw = title.clone();
+                if let Some(ref artist) = artist {
+                    to_draw.push_str(" by ");
+                    to_draw.push_str(artist);
+                }
+                to_draw.push_str(&format!(
+                    "\n{} {} / {} vol: {}",
+                    symbol,
+                    secs_to_hms(playback_time),
+                    secs_to_hms(playback_duration),
+                    playback_volume
+                ));
+                draw(&mut terminal, &to_draw)?;
+            }
+            TuiState::History => {
+                let mut to_draw = "".to_string();
+                history
+                    .iter()
+                    .for_each(|x| to_draw.push_str(&format!("{x}\n")));
+                draw(&mut terminal, &to_draw)?;
             }
         };
-        let mut playback_time = playback_time.floor() as u64;
-        playback_time = playback_time.min(playback_duration);
-        let symbol = {
-            if !playback_ready || playback_paused {
-                "|"
-            } else {
-                ">"
-            }
-        };
-        let mut to_draw = title.clone();
-        if let Some(ref artist) = artist {
-            to_draw.push_str(" by ");
-            to_draw.push_str(artist);
-        }
-        to_draw.push_str(&format!(
-            "\n{} {} / {} vol: {}",
-            symbol,
-            secs_to_hms(playback_time),
-            secs_to_hms(playback_duration),
-            playback_volume
-        ));
-        draw(&mut terminal, &to_draw)?;
 
         if event::poll(std::time::Duration::from_millis(16))? {
             let event = event::read();
@@ -121,7 +150,11 @@ pub fn tui(
                 log::debug!("Event: {event:?}");
                 if let event::Event::Key(key) = event {
                     if let Some(command) = commands.get(&key) {
+                        log::debug!("Command: {command:?}");
                         match command {
+                            TuiCommand::State(state) => {
+                                tui_state = state.clone();
+                            }
                             TuiCommand::Quit => {
                                 libmpv_s.send(LibMpvMessage::Quit)?;
                                 break;
@@ -164,6 +197,19 @@ pub fn tui(
                     playback_volume = data.volume;
                     title = data.media_title;
                     artist = data.artist;
+
+                    let mut entry_text = title.clone();
+                    if let Some(ref artist) = artist {
+                        entry_text.push_str(" by ");
+                        entry_text.push_str(artist);
+                    }
+                    if history
+                        .iter()
+                        .find(|entry| entry.ends_with(&entry_text))
+                        .is_none()
+                    {
+                        history.push(format!("{}: {}", history.len(), entry_text));
+                    }
                 }
                 LibMpvEventMessage::PlaybackPause => {
                     playback_start_offset += playback_start.elapsed()?.as_secs_f64();
