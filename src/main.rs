@@ -4,14 +4,6 @@ use sonictunes::{
 };
 
 fn main() {
-    simplelog::WriteLogger::init(
-        simplelog::LevelFilter::Debug,
-        simplelog::Config::default(),
-        std::fs::File::create("debug.log").unwrap(),
-    )
-    .unwrap();
-    log::debug!("Args: {:?}", std::env::args());
-
     let options = process_args()
         .map_err(|err| {
             match err {
@@ -27,6 +19,16 @@ fn main() {
     if options.contains(&ProgramOption::PrintHelp) {
         print_help();
         std::process::exit(-1);
+    }
+
+    if options.contains(&ProgramOption::Verbose) {
+        simplelog::WriteLogger::init(
+            simplelog::LevelFilter::Debug,
+            simplelog::Config::default(),
+            std::fs::File::create("debug.log").unwrap(),
+        )
+        .unwrap();
+        log::debug!("Args: {:?}", std::env::args());
     }
 
     let volume = if let Some(vol) = options.iter().find_map(|o| match o {

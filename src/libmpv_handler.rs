@@ -164,7 +164,7 @@ impl LibMpvHandler {
                             .map(|s| Some(s.to_string()))
                             .unwrap_or_else(|_| None);
 
-                        let duration = self.mpv.get_property::<f64>("duration/full").unwrap();
+                        let duration = self.mpv.get_property::<f64>("duration/full").unwrap_or(0.0);
                         let volume = self.mpv.get_property::<i64>("volume").unwrap();
                         tui_s
                             .send(LibMpvEventMessage::FileLoaded(FileLoadedData {

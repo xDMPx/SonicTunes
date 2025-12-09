@@ -16,6 +16,7 @@ pub enum ProgramOption {
     URL(String),
     PrintHelp,
     Volume(i64),
+    Verbose,
 }
 
 #[derive(Debug)]
@@ -42,6 +43,7 @@ pub fn process_args() -> Result<Vec<ProgramOption>, Error> {
     for arg in args {
         let arg = match arg.as_str() {
             "--help" => Ok(ProgramOption::PrintHelp),
+            "--verbose" => Ok(ProgramOption::Verbose),
             s if s.starts_with("--volume=") => {
                 if let Some(Ok(vol)) = s.split_once('=').map(|(_, s)| s.parse::<i8>()) {
                     if vol >= 0 && vol <= 100 {
@@ -69,6 +71,7 @@ pub fn print_help() {
     println!("       {} --help", env!("CARGO_PKG_NAME"));
     println!("Options:");
     println!("\t --volume=<value>\t(0..100)");
+    println!("\t --verbose");
     println!("\t --help");
 }
 
