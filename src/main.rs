@@ -68,7 +68,7 @@ fn main() {
     crossbeam::scope(move |scope| {
         scope.spawn(move |_| {
             log::debug!("TUI: START");
-            sonictunes::tui::tui(libmpv_s, tui_r);
+            sonictunes::tui::tui(libmpv_s, tui_r).unwrap();
             log::debug!("TUI: END");
         });
         scope.spawn(move |_| {

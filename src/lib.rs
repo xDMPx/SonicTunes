@@ -1,5 +1,7 @@
 use rand::random_range;
 
+use crate::libmpv_handler::LibMpvMessage;
+
 pub mod libmpv_handler;
 pub mod mc_os_interface;
 pub mod tui;
@@ -26,6 +28,8 @@ pub enum SonicTunesError {
     ReqwestError(reqwest::Error),
     SouvlakiError(souvlaki::Error),
     SystemTimeError(std::time::SystemTimeError),
+    IOError(std::io::Error),
+    LibMpvMessageSendError(crossbeam::channel::SendError<LibMpvMessage>),
 }
 
 impl From<reqwest::Error> for SonicTunesError {
@@ -43,6 +47,18 @@ impl From<souvlaki::Error> for SonicTunesError {
 impl From<std::time::SystemTimeError> for SonicTunesError {
     fn from(err: std::time::SystemTimeError) -> Self {
         SonicTunesError::SystemTimeError(err)
+    }
+}
+
+impl From<std::io::Error> for SonicTunesError {
+    fn from(err: std::io::Error) -> Self {
+        SonicTunesError::IOError(err)
+    }
+}
+
+impl From<crossbeam::channel::SendError<LibMpvMessage>> for SonicTunesError {
+    fn from(err: crossbeam::channel::SendError<LibMpvMessage>) -> Self {
+        SonicTunesError::LibMpvMessageSendError(err)
     }
 }
 
