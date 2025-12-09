@@ -62,7 +62,8 @@ fn main() {
     let (libmpv_s, libmpv_r) = crossbeam::channel::unbounded();
     let (mc_tui_s, mc_tui_r) = crossbeam::channel::unbounded();
 
-    let mut mc_os_interface = sonictunes::mc_os_interface::MCOSInterface::new(libmpv_s.clone());
+    let mut mc_os_interface =
+        sonictunes::mc_os_interface::MCOSInterface::new(libmpv_s.clone()).unwrap();
 
     crossbeam::scope(move |scope| {
         scope.spawn(move |_| {
@@ -77,7 +78,7 @@ fn main() {
         });
         scope.spawn(move |_| {
             log::debug!("MCOSInterface: START");
-            mc_os_interface.handle_signals(mc_tui_r);
+            mc_os_interface.handle_signals(mc_tui_r).unwrap();
             log::debug!("MCOSInterface: END");
         });
     })

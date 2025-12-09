@@ -24,11 +24,25 @@ pub enum SonicTunesError {
     InvalidOption(String),
     InvalidOptionsStructure,
     ReqwestError(reqwest::Error),
+    SouvlakiError(souvlaki::Error),
+    SystemTimeError(std::time::SystemTimeError),
 }
 
 impl From<reqwest::Error> for SonicTunesError {
     fn from(err: reqwest::Error) -> Self {
         SonicTunesError::ReqwestError(err)
+    }
+}
+
+impl From<souvlaki::Error> for SonicTunesError {
+    fn from(err: souvlaki::Error) -> Self {
+        SonicTunesError::SouvlakiError(err)
+    }
+}
+
+impl From<std::time::SystemTimeError> for SonicTunesError {
+    fn from(err: std::time::SystemTimeError) -> Self {
+        SonicTunesError::SystemTimeError(err)
     }
 }
 
