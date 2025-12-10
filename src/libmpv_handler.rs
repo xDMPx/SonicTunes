@@ -1,4 +1,4 @@
-use crate::{audiofile_to_url, get_random_audiofile};
+use crate::{SonicTunesError, audiofile_to_url, get_random_audiofile};
 
 #[derive(Debug)]
 pub enum LibMpvMessage {
@@ -73,7 +73,7 @@ impl LibMpvHandler {
         tui_s: crossbeam::channel::Sender<LibMpvEventMessage>,
         mc_os_s: crossbeam::channel::Sender<LibMpvEventMessage>,
         libmpv_r: crossbeam::channel::Receiver<LibMpvMessage>,
-    ) {
+    ) -> Result<(), SonicTunesError> {
         loop {
             let ev = mpv_client
                 .wait_event(0.016)
@@ -85,17 +85,13 @@ impl LibMpvHandler {
             match ev {
                 Ok(event) => match event {
                     libmpv2::events::Event::StartFile => {
-                        tui_s.send(LibMpvEventMessage::StartFile).unwrap();
-                        mc_os_s.send(LibMpvEventMessage::StartFile).unwrap();
+                        tui_s.send(LibMpvEventMessage::StartFile)?;
+                        mc_os_s.send(LibMpvEventMessage::StartFile)?;
                     }
                     libmpv2::events::Event::PlaybackRestart => {
-                        let pause = self.mpv.get_property::<bool>("pause").unwrap();
-                        tui_s
-                            .send(LibMpvEventMessage::PlaybackRestart(pause))
-                            .unwrap();
-                        mc_os_s
-                            .send(LibMpvEventMessage::PlaybackRestart(pause))
-                            .unwrap();
+                        let pause = self.mpv.get_property::<bool>("pause")?;
+                        tui_s.send(LibMpvEventMessage::PlaybackRestart(pause))?;
+                        mc_os_s.send(LibMpvEventMessage::PlaybackRestart(pause))?;
                     }
                     libmpv2::events::Event::PropertyChange {
                         name: "pause",
@@ -103,11 +99,11 @@ impl LibMpvHandler {
                         ..
                     } => {
                         if pause {
-                            tui_s.send(LibMpvEventMessage::PlaybackPause).unwrap();
-                            mc_os_s.send(LibMpvEventMessage::PlaybackPause).unwrap();
+                            tui_s.send(LibMpvEventMessage::PlaybackPause)?;
+                            mc_os_s.send(LibMpvEventMessage::PlaybackPause)?;
                         } else {
-                            tui_s.send(LibMpvEventMessage::PlaybackResume).unwrap();
-                            mc_os_s.send(LibMpvEventMessage::PlaybackResume).unwrap();
+                            tui_s.send(LibMpvEventMessage::PlaybackResume)?;
+                            mc_os_s.send(LibMpvEventMessage::PlaybackResume)?;
                         }
                     }
                     libmpv2::events::Event::PropertyChange {
@@ -115,43 +111,27 @@ impl LibMpvHandler {
                         change: libmpv2::events::PropertyData::Int64(volume),
                         ..
                     } => {
-                        tui_s
-                            .send(LibMpvEventMessage::VolumeUpdate(volume))
-                            .unwrap();
-                        mc_os_s
-                            .send(LibMpvEventMessage::VolumeUpdate(volume))
-                            .unwrap();
+                        tui_s.send(LibMpvEventMessage::VolumeUpdate(volume))?;
+                        mc_os_s.send(LibMpvEventMessage::VolumeUpdate(volume))?;
                     }
                     libmpv2::events::Event::PropertyChange {
                         name: "duration/full",
                         change: libmpv2::events::PropertyData::Double(duration),
                         ..
                     } => {
-                        tui_s
-                            .send(LibMpvEventMessage::DurationUpdate(duration))
-                            .unwrap();
-                        mc_os_s
-                            .send(LibMpvEventMessage::DurationUpdate(duration))
-                            .unwrap();
+                        tui_s.send(LibMpvEventMessage::DurationUpdate(duration))?;
+                        mc_os_s.send(LibMpvEventMessage::DurationUpdate(duration))?;
                     }
                     libmpv2::events::Event::Seek => {
-                        let time_pos = self.mpv.get_property::<f64>("time-pos/full").unwrap();
-                        tui_s
-                            .send(LibMpvEventMessage::PositionUpdate(time_pos))
-                            .unwrap();
-                        mc_os_s
-                            .send(LibMpvEventMessage::PositionUpdate(time_pos))
-                            .unwrap();
+                        let time_pos = self.mpv.get_property::<f64>("time-pos/full")?;
+                        tui_s.send(LibMpvEventMessage::PositionUpdate(time_pos))?;
+                        mc_os_s.send(LibMpvEventMessage::PositionUpdate(time_pos))?;
                     }
                     libmpv2::events::Event::FileLoaded => {
                         let media_title = self
                             .mpv
                             .get_property::<libmpv2::MpvStr>("metadata/by-key/title")
-                            .unwrap_or_else(|_| {
-                                self.mpv
-                                    .get_property::<libmpv2::MpvStr>("media-title")
-                                    .unwrap()
-                            })
+                            .or_else(|_| self.mpv.get_property::<libmpv2::MpvStr>("media-title"))?
                             .to_string();
                         let artist = self
                             .mpv
@@ -165,30 +145,26 @@ impl LibMpvHandler {
                             .unwrap_or_else(|_| None);
 
                         let duration = self.mpv.get_property::<f64>("duration/full").unwrap_or(0.0);
-                        let volume = self.mpv.get_property::<i64>("volume").unwrap();
-                        tui_s
-                            .send(LibMpvEventMessage::FileLoaded(FileLoadedData {
-                                media_title: media_title.clone(),
-                                artist: artist.clone(),
-                                album: album.clone(),
-                                duration,
-                                volume,
-                            }))
-                            .unwrap();
-                        mc_os_s
-                            .send(LibMpvEventMessage::FileLoaded(FileLoadedData {
-                                media_title,
-                                artist,
-                                album,
-                                duration,
-                                volume,
-                            }))
-                            .unwrap();
+                        let volume = self.mpv.get_property::<i64>("volume")?;
+                        tui_s.send(LibMpvEventMessage::FileLoaded(FileLoadedData {
+                            media_title: media_title.clone(),
+                            artist: artist.clone(),
+                            album: album.clone(),
+                            duration,
+                            volume,
+                        }))?;
+                        mc_os_s.send(LibMpvEventMessage::FileLoaded(FileLoadedData {
+                            media_title,
+                            artist,
+                            album,
+                            duration,
+                            volume,
+                        }))?;
                     }
                     libmpv2::events::Event::EndFile(0) => {
-                        let audiofile = get_random_audiofile(&url).unwrap();
+                        let audiofile = get_random_audiofile(&url)?;
                         let audiofile_url = audiofile_to_url(&url, &audiofile);
-                        self.load_file(&audiofile_url).unwrap();
+                        self.load_file(&audiofile_url)?;
                     }
 
                     _ => (),
@@ -202,52 +178,47 @@ impl LibMpvHandler {
                 log::debug!("LibMpvMessage: {msg:?}");
                 match msg {
                     LibMpvMessage::Quit => {
-                        mc_os_s.send(LibMpvEventMessage::Quit).unwrap();
-                        self.mpv.command("quit", &["0"]).unwrap();
+                        mc_os_s.send(LibMpvEventMessage::Quit)?;
+                        self.mpv.command("quit", &["0"])?;
                         break;
                     }
                     LibMpvMessage::UpdateVolume(vol) => {
-                        let mut volume = self.mpv.get_property::<i64>("volume").unwrap();
+                        let mut volume = self.mpv.get_property::<i64>("volume")?;
                         volume += vol;
                         volume = volume.clamp(0, 200);
-                        self.mpv.set_property("volume", volume).unwrap();
+                        self.mpv.set_property("volume", volume)?;
                     }
                     LibMpvMessage::SetPosition(pos) => {
-                        self.mpv
-                            .command("seek", &[&pos.to_string(), "absolute"])
-                            .unwrap();
+                        self.mpv.command("seek", &[&pos.to_string(), "absolute"])?;
                     }
                     LibMpvMessage::SetVolume(vol) => {
-                        self.mpv.set_property("volume", vol).unwrap();
+                        self.mpv.set_property("volume", vol)?;
                     }
                     LibMpvMessage::UpdatePosition(offset) => {
-                        self.mpv.command("seek", &[&offset.to_string()]).unwrap();
+                        self.mpv.command("seek", &[&offset.to_string()])?;
                     }
                     LibMpvMessage::PlayPause => {
-                        self.mpv.command("cycle", &["pause"]).unwrap();
+                        self.mpv.command("cycle", &["pause"])?;
                     }
                     LibMpvMessage::Resume => {
-                        self.mpv.set_property("pause", false).unwrap();
+                        self.mpv.set_property("pause", false)?;
                     }
                     LibMpvMessage::Pause => {
-                        self.mpv.set_property("pause", true).unwrap();
+                        self.mpv.set_property("pause", true)?;
                     }
                     LibMpvMessage::PlayNext => {
                         if let Err(err) = self.mpv.command("playlist-next", &["weak"]) {
                             if err != libmpv2::Error::Raw(-12) {
                                 panic!("{err:?}");
                             } else {
-                                let pos = self
-                                    .mpv
-                                    .get_property::<i64>("playlist-playing-pos")
-                                    .unwrap();
-                                let count = self.mpv.get_property::<i64>("playlist-count").unwrap();
+                                let pos = self.mpv.get_property::<i64>("playlist-playing-pos")?;
+                                let count = self.mpv.get_property::<i64>("playlist-count")?;
                                 if pos == count - 1 {
-                                    let audiofile = get_random_audiofile(&url).unwrap();
+                                    let audiofile = get_random_audiofile(&url)?;
                                     let audiofile_url = audiofile_to_url(&url, &audiofile);
-                                    self.load_file(&audiofile_url).unwrap();
+                                    self.load_file(&audiofile_url)?;
                                 }
-                                self.mpv.command("playlist-next", &["force"]).unwrap();
+                                self.mpv.command("playlist-next", &["force"])?;
                             }
                         }
                     }
@@ -256,12 +227,14 @@ impl LibMpvHandler {
                             if err != libmpv2::Error::Raw(-12) {
                                 panic!("{err:?}");
                             } else {
-                                self.mpv.command("seek", &["0", "absolute"]).unwrap();
+                                self.mpv.command("seek", &["0", "absolute"])?;
                             }
                         }
                     }
                 }
             }
         }
+
+        Ok(())
     }
 }

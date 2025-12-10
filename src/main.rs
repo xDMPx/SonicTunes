@@ -73,7 +73,9 @@ fn main() {
         });
         scope.spawn(move |_| {
             log::debug!("MPV: START");
-            mpv_handler.run(mpv_client, &url, tui_s, mc_tui_s, libmpv_r);
+            mpv_handler
+                .run(mpv_client, &url, tui_s, mc_tui_s, libmpv_r)
+                .unwrap();
             log::debug!("MPV: END");
         });
         scope.spawn(move |_| {
