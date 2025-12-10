@@ -137,9 +137,17 @@ pub fn tui(
             }
             TuiState::History => {
                 let mut to_draw = "".to_string();
-                history
+                let current = history
                     .iter()
-                    .for_each(|x| to_draw.push_str(&format!("{x}\n")));
+                    .enumerate()
+                    .find_map(|(i, x)| if x.ends_with(&title) { Some(i) } else { None })
+                    .unwrap_or(0);
+                history.iter().enumerate().for_each(|(i, x)| {
+                    if i == current {
+                        to_draw.push_str("* ")
+                    };
+                    to_draw.push_str(&format!("{x}\n"))
+                });
                 draw(&mut terminal, &to_draw)?;
             }
         };
