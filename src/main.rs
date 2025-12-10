@@ -1,5 +1,6 @@
 use sonictunes::{
-    ProgramOption, audiofile_to_url, get_random_audiofile, libmpv_handler::LibMpvHandler,
+    ProgramOption, audiofile_to_url, get_random_audiofile,
+    libmpv_handler::{LibMpvEventMessage, LibMpvHandler, LibMpvMessage},
     print_help, process_args,
 };
 
@@ -62,25 +63,47 @@ fn main() {
     let (libmpv_s, libmpv_r) = crossbeam::channel::unbounded();
     let (mc_tui_s, mc_tui_r) = crossbeam::channel::unbounded();
 
+    let mc_tui_s2 = mc_tui_s.clone();
+    let tui_s2 = tui_s.clone();
+    let libmpv_s2 = libmpv_s.clone();
+
     let mut mc_os_interface =
         sonictunes::mc_os_interface::MCOSInterface::new(libmpv_s.clone()).unwrap();
 
     crossbeam::scope(move |scope| {
         scope.spawn(move |_| {
             log::debug!("TUI: START");
-            sonictunes::tui::tui(libmpv_s, tui_r).unwrap();
+            sonictunes::tui::tui(libmpv_s.clone(), tui_r)
+                .map_err(|err| {
+                    libmpv_s.send(LibMpvMessage::Quit).unwrap();
+                    mc_tui_s2.send(LibMpvEventMessage::Quit).unwrap();
+                    err
+                })
+                .unwrap();
             log::debug!("TUI: END");
         });
         scope.spawn(move |_| {
             log::debug!("MPV: START");
             mpv_handler
-                .run(mpv_client, &url, tui_s, mc_tui_s, libmpv_r)
+                .run(mpv_client, &url, tui_s.clone(), mc_tui_s.clone(), libmpv_r)
+                .map_err(|err| {
+                    tui_s.send(LibMpvEventMessage::Quit).unwrap();
+                    mc_tui_s.send(LibMpvEventMessage::Quit).unwrap();
+                    err
+                })
                 .unwrap();
             log::debug!("MPV: END");
         });
         scope.spawn(move |_| {
             log::debug!("MCOSInterface: START");
-            mc_os_interface.handle_signals(mc_tui_r).unwrap();
+            mc_os_interface
+                .handle_signals(mc_tui_r)
+                .map_err(|err| {
+                    tui_s2.send(LibMpvEventMessage::Quit).unwrap();
+                    libmpv_s2.send(LibMpvMessage::Quit).unwrap();
+                    err
+                })
+                .unwrap();
             log::debug!("MCOSInterface: END");
         });
     })

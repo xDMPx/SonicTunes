@@ -229,7 +229,9 @@ pub fn tui(
                 LibMpvEventMessage::DurationUpdate(dur) => {
                     playback_duration = dur.floor() as u64;
                 }
-                LibMpvEventMessage::Quit => (),
+                LibMpvEventMessage::Quit => {
+                    break;
+                }
             }
         }
     }
