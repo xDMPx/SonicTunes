@@ -1,7 +1,7 @@
 use sonictunes::{
-    ProgramOption, audiofile_to_url, get_random_audiofile,
+    PingResponse, ProgramOption, audiofile_to_url, get_random_audiofile,
     libmpv_handler::{LibMpvEventMessage, LibMpvHandler, LibMpvMessage},
-    print_help, process_args,
+    print_help, process_args, reqwest_get,
 };
 
 fn main() {
@@ -49,7 +49,21 @@ fn main() {
             _ => None,
         })
         .unwrap();
-    log::debug!("URL: {:?}", std::env::args());
+    log::debug!("URL: {:?}", url);
+
+    if let Ok(response) = reqwest_get(&format!("{}/ping", url.trim_end_matches('/'))) {
+        let ping_response: PingResponse = response
+            .json()
+            .map_err(|err| eprintln!("Invalid server response, {err}"))
+            .unwrap();
+        if ping_response.status != "ok" {
+            eprintln!("Invalid server status, {}", ping_response.status);
+            std::process::exit(-1);
+        }
+    } else {
+        eprintln!("Connection to server failed");
+        std::process::exit(-1);
+    }
 
     let mut mpv_handler = LibMpvHandler::initialize_libmpv(volume).unwrap();
     let mpv_client = mpv_handler.create_client().unwrap();

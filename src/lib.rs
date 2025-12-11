@@ -13,6 +13,12 @@ pub struct AudioFile {
     pub mime: String,
 }
 
+#[derive(serde::Deserialize)]
+pub struct PingResponse {
+    pub status: String,
+    pub version: String,
+}
+
 #[derive(PartialEq)]
 pub enum ProgramOption {
     URL(String),
