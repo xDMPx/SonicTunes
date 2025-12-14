@@ -140,7 +140,7 @@ pub fn tui(
                 let current = history
                     .iter()
                     .enumerate()
-                    .find_map(|(i, x)| if x.ends_with(&title) { Some(i) } else { None })
+                    .find_map(|(i, x)| if x.contains(&title) { Some(i) } else { None })
                     .unwrap_or(0);
                 history.iter().enumerate().for_each(|(i, x)| {
                     if i == current {
