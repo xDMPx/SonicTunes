@@ -15,6 +15,7 @@ pub enum TuiCommand {
     PlayPause,
     PlayNext,
     PlayPrevious,
+    Scroll(i16),
 }
 
 #[derive(Debug, Clone)]
@@ -84,6 +85,14 @@ pub fn tui(
             KeyEvent::new(KeyCode::Char('b'), KeyModifiers::NONE),
             TuiCommand::PlayNext,
         ),
+        (
+            KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE),
+            TuiCommand::Scroll(1),
+        ),
+        (
+            KeyEvent::new(KeyCode::Char('k'), KeyModifiers::NONE),
+            TuiCommand::Scroll(-1),
+        ),
     ]);
     let mut tui_state = TuiState::Player;
 
@@ -92,6 +101,7 @@ pub fn tui(
     let mut terminal = ratatui::init();
 
     let mut history: Vec<String> = Vec::new();
+    let mut scroll: u16 = 0;
 
     let mut playback_start = std::time::SystemTime::now();
     let mut playback_start_offset = 0.0;
@@ -133,7 +143,7 @@ pub fn tui(
                     secs_to_hms(playback_duration),
                     playback_volume
                 ));
-                draw(&mut terminal, &to_draw)?;
+                draw(&mut terminal, &to_draw, 0)?;
             }
             TuiState::History => {
                 let mut to_draw = "".to_string();
@@ -148,7 +158,7 @@ pub fn tui(
                     };
                     to_draw.push_str(&format!("{x}\n"))
                 });
-                draw(&mut terminal, &to_draw)?;
+                draw(&mut terminal, &to_draw, scroll)?;
             }
         };
 
@@ -181,6 +191,14 @@ pub fn tui(
                             }
                             TuiCommand::PlayPrevious => {
                                 libmpv_s.send(LibMpvMessage::PlayPrevious)?;
+                            }
+                            TuiCommand::Scroll(x) => {
+                                let x = *x;
+                                if x > 0 && scroll < (history.len() - 1) as u16 {
+                                    scroll += 1;
+                                } else if x < 0 && scroll > 0 {
+                                    scroll -= 1;
+                                }
                             }
                         }
                     }
@@ -248,7 +266,7 @@ pub fn tui(
     Ok(())
 }
 
-pub fn draw(terminal: &mut DefaultTerminal, text: &str) -> Result<(), std::io::Error> {
+pub fn draw(terminal: &mut DefaultTerminal, text: &str, scroll: u16) -> Result<(), std::io::Error> {
     terminal.draw(|f| {
         let area = f.area();
         let block = Block::default()
@@ -256,6 +274,7 @@ pub fn draw(terminal: &mut DefaultTerminal, text: &str) -> Result<(), std::io::E
             .borders(Borders::ALL);
         let block = block.title_alignment(ratatui::layout::Alignment::Center);
         let text = ratatui::widgets::Paragraph::new(text);
+        let text = text.scroll((scroll, 0));
         let inner = block.inner(f.area());
         f.render_widget(block, area);
         f.render_widget(text, inner);
