@@ -165,6 +165,7 @@ impl MCOSInterface {
                     LibMpvEventMessage::Quit => {
                         break;
                     }
+                    LibMpvEventMessage::PlaylistPosUpdate(_) => (),
                 }
             }
 

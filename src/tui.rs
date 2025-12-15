@@ -18,7 +18,7 @@ pub enum TuiCommand {
     Scroll(i16),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TuiState {
     Player,
     History,
@@ -101,6 +101,7 @@ pub fn tui(
     let mut terminal = ratatui::init();
 
     let mut history: Vec<String> = Vec::new();
+    let mut current: i64 = 0;
     let mut scroll: u16 = 0;
 
     let mut playback_start = std::time::SystemTime::now();
@@ -147,11 +148,7 @@ pub fn tui(
             }
             TuiState::History => {
                 let mut to_draw = "".to_string();
-                let current = history
-                    .iter()
-                    .enumerate()
-                    .find_map(|(i, x)| if x.contains(&title) { Some(i) } else { None })
-                    .unwrap_or(0);
+                let current = current as usize;
                 history.iter().enumerate().for_each(|(i, x)| {
                     if i == current {
                         to_draw.push_str("* ")
@@ -229,11 +226,7 @@ pub fn tui(
                         entry_text.push_str(" by ");
                         entry_text.push_str(artist);
                     }
-                    if history
-                        .iter()
-                        .find(|entry| entry.ends_with(&entry_text))
-                        .is_none()
-                    {
+                    if history.len() == 0 || (current as usize) >= history.len() {
                         history.push(format!("{}: {}", history.len(), entry_text));
                     }
                 }
@@ -254,6 +247,9 @@ pub fn tui(
                 }
                 LibMpvEventMessage::DurationUpdate(dur) => {
                     playback_duration = dur.floor() as u64;
+                }
+                LibMpvEventMessage::PlaylistPosUpdate(pos) => {
+                    current = pos;
                 }
                 LibMpvEventMessage::Quit => {
                     break;

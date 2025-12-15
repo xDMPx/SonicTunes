@@ -24,6 +24,7 @@ pub enum LibMpvEventMessage {
     VolumeUpdate(i64),
     PositionUpdate(f64),
     DurationUpdate(f64),
+    PlaylistPosUpdate(i64),
     Quit,
 }
 
@@ -62,6 +63,7 @@ impl LibMpvHandler {
         client.observe_property("pause", libmpv2::Format::Flag, 0)?;
         client.observe_property("volume", libmpv2::Format::Int64, 0)?;
         client.observe_property("duration/full", libmpv2::Format::Double, 0)?;
+        client.observe_property("playlist-playing-pos", libmpv2::Format::Int64, 0)?;
 
         Ok(client)
     }
@@ -121,6 +123,14 @@ impl LibMpvHandler {
                     } => {
                         tui_s.send(LibMpvEventMessage::DurationUpdate(duration))?;
                         mc_os_s.send(LibMpvEventMessage::DurationUpdate(duration))?;
+                    }
+                    libmpv2::events::Event::PropertyChange {
+                        name: "playlist-playing-pos",
+                        change: libmpv2::events::PropertyData::Int64(pos),
+                        ..
+                    } => {
+                        tui_s.send(LibMpvEventMessage::PlaylistPosUpdate(pos))?;
+                        mc_os_s.send(LibMpvEventMessage::PlaylistPosUpdate(pos))?;
                     }
                     libmpv2::events::Event::Seek => {
                         let time_pos = self.mpv.get_property::<f64>("time-pos/full")?;
