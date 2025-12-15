@@ -5,6 +5,7 @@ use sonictunes::{
 };
 
 fn main() {
+    let mut log_send: Option<sonictunes::logger::LogSender> = None;
     let options = process_args()
         .map_err(|err| {
             match err {
@@ -24,12 +25,15 @@ fn main() {
     }
 
     if options.contains(&ProgramOption::Verbose) {
-        simplelog::WriteLogger::init(
-            simplelog::LevelFilter::Debug,
-            simplelog::Config::default(),
-            std::fs::File::create("debug.log").unwrap(),
-        )
-        .unwrap();
+        let logger = sonictunes::logger::Logger::new();
+        log_send = Some(sonictunes::logger::LogSender::new(logger.get_signal_send()));
+        log::set_boxed_logger(Box::new(log_send.as_ref().unwrap().clone())).unwrap();
+        log::set_max_level(log::LevelFilter::Trace);
+
+        std::thread::spawn(move || {
+            logger.log();
+            logger.flush();
+        });
         log::debug!("Args: {:?}", std::env::args());
     }
 
@@ -122,4 +126,7 @@ fn main() {
         });
     })
     .unwrap();
+    if let Some(log_send) = log_send {
+        log_send.send_quit_signal();
+    }
 }

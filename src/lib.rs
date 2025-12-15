@@ -3,6 +3,7 @@ use rand::random_range;
 use crate::libmpv_handler::{LibMpvEventMessage, LibMpvMessage};
 
 pub mod libmpv_handler;
+pub mod logger;
 pub mod mc_os_interface;
 pub mod tui;
 
