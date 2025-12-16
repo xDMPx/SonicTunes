@@ -76,6 +76,7 @@ impl LibMpvHandler {
         mc_os_s: crossbeam::channel::Sender<LibMpvEventMessage>,
         libmpv_r: crossbeam::channel::Receiver<LibMpvMessage>,
     ) -> Result<(), SonicTunesError> {
+        let mut ignore_playnext_until_load = true;
         loop {
             let ev = mpv_client
                 .wait_event(0.016)
@@ -129,8 +130,10 @@ impl LibMpvHandler {
                         change: libmpv2::events::PropertyData::Int64(pos),
                         ..
                     } => {
-                        tui_s.send(LibMpvEventMessage::PlaylistPosUpdate(pos))?;
-                        mc_os_s.send(LibMpvEventMessage::PlaylistPosUpdate(pos))?;
+                        if pos != -1 {
+                            tui_s.send(LibMpvEventMessage::PlaylistPosUpdate(pos))?;
+                            mc_os_s.send(LibMpvEventMessage::PlaylistPosUpdate(pos))?;
+                        }
                     }
                     libmpv2::events::Event::Seek => {
                         let time_pos = self.mpv.get_property::<f64>("time-pos/full")?;
@@ -170,6 +173,7 @@ impl LibMpvHandler {
                             duration,
                             volume,
                         }))?;
+                        ignore_playnext_until_load = false;
                     }
                     libmpv2::events::Event::EndFile(0) => {
                         let audiofile = get_random_audiofile(&url)?;
@@ -217,19 +221,28 @@ impl LibMpvHandler {
                         self.mpv.set_property("pause", true)?;
                     }
                     LibMpvMessage::PlayNext => {
-                        if let Err(err) = self.mpv.command("playlist-next", &["weak"]) {
-                            if err != libmpv2::Error::Raw(-12) {
-                                panic!("{err:?}");
-                            } else {
-                                let pos = self.mpv.get_property::<i64>("playlist-playing-pos")?;
-                                let count = self.mpv.get_property::<i64>("playlist-count")?;
-                                if pos == count - 1 {
-                                    let audiofile = get_random_audiofile(&url)?;
-                                    let audiofile_url = audiofile_to_url(&url, &audiofile);
-                                    self.load_file(&audiofile_url)?;
+                        if !ignore_playnext_until_load {
+                            if let Err(err) = self.mpv.command("playlist-next", &["weak"]) {
+                                ignore_playnext_until_load = true;
+                                if err != libmpv2::Error::Raw(-12) {
+                                    panic!("{err:?}");
+                                } else {
+                                    let pos =
+                                        self.mpv.get_property::<i64>("playlist-playing-pos")?;
+                                    if pos != -1 {
+                                        let count =
+                                            self.mpv.get_property::<i64>("playlist-count")?;
+                                        if pos == count - 1 {
+                                            let audiofile = get_random_audiofile(&url)?;
+                                            let audiofile_url = audiofile_to_url(&url, &audiofile);
+                                            self.load_file(&audiofile_url)?;
+                                        }
+                                        self.mpv.command("playlist-next", &["weak"])?;
+                                    }
                                 }
-                                self.mpv.command("playlist-next", &["force"])?;
                             }
+                        } else {
+                            log::debug!("LibMpvMessage::PlayNext: ignored");
                         }
                     }
                     LibMpvMessage::PlayPrevious => {
