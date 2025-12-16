@@ -72,9 +72,9 @@ fn main() {
     let mut mpv_handler = LibMpvHandler::initialize_libmpv(volume).unwrap();
     let mpv_client = mpv_handler.create_client().unwrap();
 
-    let audiofile = get_random_audiofile(&url).unwrap();
+    let audiofile = get_random_audiofile(url).unwrap();
     log::debug!("Playing: {}", audiofile.path);
-    let audiofile_url = audiofile_to_url(&url, &audiofile);
+    let audiofile_url = audiofile_to_url(url, &audiofile);
     mpv_handler.load_file(&audiofile_url).unwrap();
 
     let (tui_s, tui_r) = crossbeam::channel::unbounded();
@@ -103,7 +103,7 @@ fn main() {
         scope.spawn(move |_| {
             log::debug!("MPV: START");
             mpv_handler
-                .run(mpv_client, &url, tui_s.clone(), mc_tui_s.clone(), libmpv_r)
+                .run(mpv_client, url, tui_s.clone(), mc_tui_s.clone(), libmpv_r)
                 .map_err(|err| {
                     tui_s.send(LibMpvEventMessage::Quit).unwrap();
                     mc_tui_s.send(LibMpvEventMessage::Quit).unwrap();
