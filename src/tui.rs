@@ -17,6 +17,7 @@ pub enum TuiCommand {
     PlayPrevious,
     Scroll(i16),
     EnterCommandMode(bool),
+    PauseAfter(u64),
 }
 
 fn map_str_to_tuicommand(str: &str) -> Option<TuiCommand> {
@@ -42,6 +43,10 @@ fn map_str_to_tuicommand(str: &str) -> Option<TuiCommand> {
         "play-pause" => Some(TuiCommand::PlayPause),
         "play-next" => Some(TuiCommand::PlayNext),
         "play-prev" => Some(TuiCommand::PlayPrevious),
+        "pause-after" => {
+            let time_min: u64 = args.next()?.parse().ok()?;
+            Some(TuiCommand::PauseAfter(time_min))
+        }
         _ => None,
     }
 }
@@ -149,6 +154,8 @@ pub fn tui(
     let mut playback_ready = false;
     let mut playback_duration = 0;
     let mut playback_volume = 0;
+
+    let mut pause_after = None;
 
     loop {
         match tui_state {
@@ -280,6 +287,11 @@ pub fn tui(
                             TuiCommand::EnterCommandMode(enter) => {
                                 command_mode = enter;
                             }
+                            TuiCommand::PauseAfter(min) => {
+                                pause_after = Some(crossbeam::channel::after(
+                                    std::time::Duration::from_mins(min),
+                                ));
+                            }
                         }
                     }
                 }
@@ -338,6 +350,9 @@ pub fn tui(
                     break;
                 }
             }
+        }
+        if let Some(_) = pause_after.as_ref().map(|x| x.try_recv().ok()).flatten() {
+            libmpv_s.send(LibMpvMessage::Pause)?;
         }
     }
     ratatui::restore();
