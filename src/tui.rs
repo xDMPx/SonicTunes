@@ -68,6 +68,7 @@ pub fn tui(
 ) -> Result<(), SonicTunesError> {
     let mut command_mode = false;
     let mut command_text = "".to_string();
+    let mut cursor_position: u16 = 0;
 
     let commands = std::collections::HashMap::from([
         (
@@ -205,6 +206,7 @@ pub fn tui(
                     } else {
                         None
                     },
+                    cursor_position,
                 )?;
             }
             TuiState::History => {
@@ -225,6 +227,7 @@ pub fn tui(
                     } else {
                         None
                     },
+                    cursor_position,
                 )?;
             }
         };
@@ -239,19 +242,42 @@ pub fn tui(
                         if key.code.to_string().len() == 1 {
                             let c = key.code.to_string().chars().next().unwrap();
                             if c.is_alphanumeric() || c == '-' {
-                                command_text.push(c);
+                                if cursor_position == command_text.len() as u16 {
+                                    command_text.push(c);
+                                } else {
+                                    command_text.insert(cursor_position.into(), c);
+                                }
+                                cursor_position += 1;
                             }
                         } else if key.code == event::KeyCode::Backspace {
-                            let _ = command_text.pop();
+                            if command_text.len() > 0 && cursor_position > 0 {
+                                command_text.remove((cursor_position.saturating_sub(1)).into());
+                                if cursor_position > 0 {
+                                    cursor_position -= 1;
+                                }
+                            }
                         } else if key.code == event::KeyCode::Esc {
                             command_mode = false;
                             command_text = "".to_string();
+                            cursor_position = 0;
                         } else if key.code == event::KeyCode::Enter {
                             command = map_str_to_tuicommand(&command_text);
                             command_mode = false;
                             command_text = "".to_string();
+                            cursor_position = 0;
                         } else if key.code == event::KeyCode::Char(' ') {
-                            command_text.push(' ');
+                            if cursor_position == command_text.len() as u16 {
+                                command_text.push(' ');
+                                cursor_position += 1;
+                            }
+                        } else if key.code == event::KeyCode::Left {
+                            if cursor_position > 0 {
+                                cursor_position -= 1;
+                            }
+                        } else if key.code == event::KeyCode::Right {
+                            if cursor_position < command_text.len() as u16 {
+                                cursor_position += 1;
+                            }
                         }
                     } else {
                         if let Some(key_command) = commands.get(&key) {
@@ -369,6 +395,7 @@ pub fn tui(
         }
         if let Some(_) = quit_after.as_ref().map(|x| x.try_recv().ok()).flatten() {
             libmpv_s.send(LibMpvMessage::Quit)?;
+            break;
         }
     }
     ratatui::restore();
@@ -381,6 +408,7 @@ pub fn draw(
     text: &str,
     scroll: u16,
     command: Option<&str>,
+    cursor_position: u16,
 ) -> Result<(), std::io::Error> {
     terminal.draw(|f| {
         let area = f.area();
@@ -399,6 +427,10 @@ pub fn draw(
             inner.y = inner.height;
             inner.height = 1;
             f.render_widget(text, inner);
+            f.set_cursor_position(ratatui::layout::Position::new(
+                inner.x + 1 + cursor_position,
+                inner.y,
+            ));
         }
     })?;
 
