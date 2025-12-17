@@ -18,6 +18,7 @@ pub enum TuiCommand {
     Scroll(i16),
     EnterCommandMode(bool),
     PauseAfter(u64),
+    QuitAfter(u64),
 }
 
 fn map_str_to_tuicommand(str: &str) -> Option<TuiCommand> {
@@ -46,6 +47,10 @@ fn map_str_to_tuicommand(str: &str) -> Option<TuiCommand> {
         "pause-after" => {
             let time_min: u64 = args.next()?.parse().ok()?;
             Some(TuiCommand::PauseAfter(time_min))
+        }
+        "quit-after" => {
+            let time_min: u64 = args.next()?.parse().ok()?;
+            Some(TuiCommand::QuitAfter(time_min))
         }
         _ => None,
     }
@@ -156,6 +161,7 @@ pub fn tui(
     let mut playback_volume = 0;
 
     let mut pause_after = None;
+    let mut quit_after = None;
 
     loop {
         match tui_state {
@@ -291,6 +297,13 @@ pub fn tui(
                                 pause_after = Some(crossbeam::channel::after(
                                     std::time::Duration::from_mins(min),
                                 ));
+                                quit_after = None;
+                            }
+                            TuiCommand::QuitAfter(min) => {
+                                quit_after = Some(crossbeam::channel::after(
+                                    std::time::Duration::from_mins(min),
+                                ));
+                                pause_after = None;
                             }
                         }
                     }
@@ -353,6 +366,9 @@ pub fn tui(
         }
         if let Some(_) = pause_after.as_ref().map(|x| x.try_recv().ok()).flatten() {
             libmpv_s.send(LibMpvMessage::Pause)?;
+        }
+        if let Some(_) = quit_after.as_ref().map(|x| x.try_recv().ok()).flatten() {
+            libmpv_s.send(LibMpvMessage::Quit)?;
         }
     }
     ratatui::restore();
