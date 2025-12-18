@@ -72,9 +72,8 @@ impl Logger {
         let recv = &self.logger_signal_recv;
         for _i in 0..recv.len() {
             let signal = recv.recv().unwrap();
-            match signal {
-                LogMessage::Message(msg) => self.log_to_file(&msg),
-                _ => (),
+            if let LogMessage::Message(msg) = signal {
+                self.log_to_file(&msg)
             }
         }
     }

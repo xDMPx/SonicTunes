@@ -274,15 +274,13 @@ pub fn tui(
                             if cursor_position > 0 {
                                 cursor_position -= 1;
                             }
-                        } else if key.code == event::KeyCode::Right {
-                            if cursor_position < command_text.len() as u16 {
-                                cursor_position += 1;
-                            }
+                        } else if key.code == event::KeyCode::Right
+                            && cursor_position < command_text.len() as u16
+                        {
+                            cursor_position += 1;
                         }
-                    } else {
-                        if let Some(key_command) = commands.get(&key) {
-                            command = Some(key_command.clone());
-                        }
+                    } else if let Some(key_command) = commands.get(&key) {
+                        command = Some(key_command.clone());
                     }
                     if let Some(command) = command {
                         log::debug!("Command: {command:?}");
@@ -390,10 +388,18 @@ pub fn tui(
                 }
             }
         }
-        if let Some(_) = pause_after.as_ref().map(|x| x.try_recv().ok()).flatten() {
+        if pause_after
+            .as_ref()
+            .and_then(|x| x.try_recv().ok())
+            .is_some()
+        {
             libmpv_s.send(LibMpvMessage::Pause)?;
         }
-        if let Some(_) = quit_after.as_ref().map(|x| x.try_recv().ok()).flatten() {
+        if quit_after
+            .as_ref()
+            .and_then(|x| x.try_recv().ok())
+            .is_some()
+        {
             libmpv_s.send(LibMpvMessage::Quit)?;
             break;
         }
