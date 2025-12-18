@@ -104,7 +104,7 @@ pub fn process_args() -> Result<Vec<ProgramOption>, SonicTunesError> {
             "--verbose" => Ok(ProgramOption::Verbose),
             s if s.starts_with("--volume=") => {
                 if let Some(Ok(vol)) = s.split_once('=').map(|(_, s)| s.parse::<i8>()) {
-                    if vol >= 0 && vol <= 100 {
+                    if (0..=100).contains(&vol) {
                         Ok(ProgramOption::Volume(vol.into()))
                     } else {
                         Err(SonicTunesError::InvalidOption(arg))

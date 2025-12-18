@@ -258,7 +258,7 @@ pub fn tui(
                                 cursor_position += 1;
                             }
                         } else if key.code == event::KeyCode::Backspace {
-                            if command_text.len() > 0 && cursor_position > 0 {
+                            if !command_text.is_empty() && cursor_position > 0 {
                                 command_text.remove((cursor_position.saturating_sub(1)).into());
                                 if cursor_position > 0 {
                                     cursor_position -= 1;
@@ -369,7 +369,7 @@ pub fn tui(
                         entry_text.push_str(" by ");
                         entry_text.push_str(artist);
                     }
-                    if history.len() == 0 || (current as usize) >= history.len() {
+                    if history.is_empty() || (current as usize) >= history.len() {
                         history.push(format!("{}: {}", history.len(), entry_text));
                     }
                 }
