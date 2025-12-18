@@ -11,6 +11,7 @@ pub enum TuiCommand {
     State(TuiState),
     Quit,
     Volume(i64),
+    SetVolume(i64),
     Seek(f64),
     PlayPause,
     PlayNext,
@@ -33,9 +34,16 @@ fn map_str_to_tuicommand(str: &str) -> Option<TuiCommand> {
     match command_str {
         "quit" | "q" => Some(TuiCommand::Quit),
         "vol" => {
-            let mut volume: i64 = args.next()?.parse().ok()?;
-            volume = volume.clamp(-200, 200);
-            Some(TuiCommand::Volume(volume))
+            let arg = args.next()?;
+            if arg.starts_with('-') || arg.starts_with('+') {
+                let mut volume: i64 = arg.parse().ok()?;
+                volume = volume.clamp(-200, 200);
+                Some(TuiCommand::Volume(volume))
+            } else {
+                let mut volume: i64 = arg.parse().ok()?;
+                volume = volume.clamp(-200, 200);
+                Some(TuiCommand::SetVolume(volume))
+            }
         }
         "seek" => {
             let offset: f64 = args.next()?.parse().ok()?;
@@ -241,7 +249,7 @@ pub fn tui(
                     if command_mode {
                         if key.code.to_string().len() == 1 {
                             let c = key.code.to_string().chars().next().unwrap();
-                            if c.is_alphanumeric() || c == '-' {
+                            if c.is_alphanumeric() || c == '-' || c == '+' {
                                 if cursor_position == command_text.len() as u16 {
                                     command_text.push(c);
                                 } else {
@@ -294,6 +302,9 @@ pub fn tui(
                             }
                             TuiCommand::Volume(vol) => {
                                 libmpv_s.send(LibMpvMessage::UpdateVolume(vol))?;
+                            }
+                            TuiCommand::SetVolume(vol) => {
+                                libmpv_s.send(LibMpvMessage::SetVolume(vol))?;
                             }
                             TuiCommand::Seek(offset) => {
                                 libmpv_s.send(LibMpvMessage::UpdatePosition(offset))?;
