@@ -3,6 +3,7 @@ use crate::libmpv_handler::{LibMpvEventMessage, LibMpvMessage};
 use ratatui::crossterm::event::{self, KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
     DefaultTerminal,
+    style::Stylize,
     widgets::{Block, Borders},
 };
 
@@ -76,6 +77,7 @@ pub fn tui(
 ) -> Result<(), SonicTunesError> {
     let mut command_mode = false;
     let mut command_text = "".to_string();
+    let mut command_error = "".to_string();
     let mut cursor_position: u16 = 0;
 
     let commands = std::collections::HashMap::from([
@@ -214,6 +216,11 @@ pub fn tui(
                     } else {
                         None
                     },
+                    if command_error.trim().is_empty() {
+                        None
+                    } else {
+                        Some(&command_error)
+                    },
                     cursor_position,
                 )?;
             }
@@ -235,6 +242,11 @@ pub fn tui(
                     } else {
                         None
                     },
+                    if command_error.trim().is_empty() {
+                        None
+                    } else {
+                        Some(&command_error)
+                    },
                     cursor_position,
                 )?;
             }
@@ -246,6 +258,7 @@ pub fn tui(
                 log::debug!("Event: {event:?}");
                 let mut command = None;
                 if let event::Event::Key(key) = event {
+                    command_error = "".to_string();
                     if command_mode {
                         if key.code.to_string().len() == 1 {
                             let c = key.code.to_string().chars().next().unwrap();
@@ -270,6 +283,9 @@ pub fn tui(
                             cursor_position = 0;
                         } else if key.code == event::KeyCode::Enter {
                             command = map_str_to_tuicommand(&command_text);
+                            if command.is_none() && !command_text.trim().is_empty() {
+                                command_error = "Error: unknown command".to_string();
+                            }
                             command_mode = false;
                             command_text = "".to_string();
                             cursor_position = 0;
@@ -425,6 +441,7 @@ pub fn draw(
     text: &str,
     scroll: u16,
     command: Option<&str>,
+    error: Option<&str>,
     cursor_position: u16,
 ) -> Result<(), std::io::Error> {
     terminal.draw(|f| {
@@ -438,6 +455,13 @@ pub fn draw(
         let inner = block.inner(f.area());
         f.render_widget(block, area);
         f.render_widget(text, inner);
+        if let Some(error) = error {
+            let text = ratatui::widgets::Paragraph::new(error).light_red();
+            let mut inner = inner;
+            inner.y = inner.height;
+            inner.height = 1;
+            f.render_widget(text, inner);
+        }
         if let Some(command) = command {
             let text = ratatui::widgets::Paragraph::new(":".to_owned() + command);
             let mut inner = inner;
