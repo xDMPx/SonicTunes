@@ -90,10 +90,9 @@ pub fn process_args() -> Result<Vec<ProgramOption>, SonicTunesError> {
     let last_arg = args.pop().ok_or(SonicTunesError::InvalidOptionsStructure)?;
     if last_arg != "--help" {
         let url = last_arg;
-        if !url.starts_with("http") {
-            return Err(SonicTunesError::InvalidOptionsStructure);
+        if url.starts_with("http") {
+            options.push(ProgramOption::URL(url));
         }
-        options.push(ProgramOption::URL(url));
     } else {
         args.push(last_arg);
     }
