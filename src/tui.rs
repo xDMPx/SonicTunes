@@ -82,7 +82,7 @@ pub fn tui(
     let mut command_error = "".to_string();
     let mut cursor_position: u16 = 0;
 
-    let commands = std::collections::HashMap::from([
+    let keybindings = std::collections::HashMap::from([
         (
             KeyEvent::new(KeyCode::Char('1'), KeyModifiers::NONE),
             (TuiCommand::State(TuiState::Player), Some("view player")),
@@ -257,7 +257,7 @@ pub fn tui(
                 )?;
             }
             TuiState::Help => {
-                let to_draw = generate_help_str(&commands);
+                let to_draw = generate_help_str(&keybindings);
                 draw(
                     &mut terminal,
                     &to_draw,
@@ -328,7 +328,7 @@ pub fn tui(
                         {
                             cursor_position += 1;
                         }
-                    } else if let Some((key_command, _)) = commands.get(&key) {
+                    } else if let Some((key_command, _)) = keybindings.get(&key) {
                         command = Some(key_command.clone());
                     }
                     if let Some(command) = command {
@@ -512,14 +512,14 @@ fn secs_to_hms(seconds: u64) -> String {
 }
 
 pub fn generate_help_str(
-    commands: &std::collections::HashMap<KeyEvent, (TuiCommand, Option<&str>)>,
+    keybindings: &std::collections::HashMap<KeyEvent, (TuiCommand, Option<&str>)>,
 ) -> String {
     let mut help_str = String::new();
     let min_width = 12;
 
     writeln!(help_str, "Keybindings:").unwrap();
     let mut keybindings_help_str = vec![];
-    for (key_event, (_, description)) in commands {
+    for (key_event, (_, description)) in keybindings {
         let mut help_str = String::new();
         if let Some(description) = description {
             help_str += &match key_event.code {
