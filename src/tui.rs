@@ -6,6 +6,7 @@ use ratatui::{
     style::Stylize,
     widgets::{Block, Borders},
 };
+use std::fmt::Write;
 
 #[derive(Debug, Clone)]
 pub enum TuiCommand {
@@ -69,6 +70,7 @@ fn map_str_to_tuicommand(str: &str) -> Option<TuiCommand> {
 pub enum TuiState {
     Player,
     History,
+    Help,
 }
 
 pub fn tui(
@@ -83,75 +85,79 @@ pub fn tui(
     let commands = std::collections::HashMap::from([
         (
             KeyEvent::new(KeyCode::Char('1'), KeyModifiers::NONE),
-            TuiCommand::State(TuiState::Player),
+            (TuiCommand::State(TuiState::Player), Some("view player")),
         ),
         (
             KeyEvent::new(KeyCode::Char('2'), KeyModifiers::NONE),
-            TuiCommand::State(TuiState::History),
+            (TuiCommand::State(TuiState::History), Some("view history")),
+        ),
+        (
+            KeyEvent::new(KeyCode::Char('0'), KeyModifiers::NONE),
+            (TuiCommand::State(TuiState::Help), Some("view help")),
         ),
         (
             KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE),
-            TuiCommand::Quit,
+            (TuiCommand::Quit, Some("quit, q")),
         ),
         (
             KeyEvent::new(KeyCode::Char('{'), KeyModifiers::NONE),
-            TuiCommand::Volume(-1),
+            (TuiCommand::Volume(-1), Some("vol -1")),
         ),
         (
             KeyEvent::new(KeyCode::Char('}'), KeyModifiers::NONE),
-            TuiCommand::Volume(1),
+            (TuiCommand::Volume(1), Some("vol +1")),
         ),
         (
             KeyEvent::new(KeyCode::Char('['), KeyModifiers::NONE),
-            TuiCommand::Volume(-10),
+            (TuiCommand::Volume(-10), Some("vol -10")),
         ),
         (
             KeyEvent::new(KeyCode::Char(']'), KeyModifiers::NONE),
-            TuiCommand::Volume(10),
+            (TuiCommand::Volume(10), Some("vol +10")),
         ),
         (
             KeyEvent::new(KeyCode::Left, KeyModifiers::NONE),
-            TuiCommand::Seek(-10.0),
+            (TuiCommand::Seek(-10.0), Some("seek -10")),
         ),
         (
             KeyEvent::new(KeyCode::Left, KeyModifiers::SHIFT),
-            TuiCommand::Seek(-60.0),
+            (TuiCommand::Seek(-60.0), Some("seek -60")),
         ),
         (
             KeyEvent::new(KeyCode::Right, KeyModifiers::NONE),
-            TuiCommand::Seek(10.0),
+            (TuiCommand::Seek(10.0), Some("seek +10")),
         ),
         (
             KeyEvent::new(KeyCode::Right, KeyModifiers::SHIFT),
-            TuiCommand::Seek(60.0),
+            (TuiCommand::Seek(60.0), Some("seek -60")),
         ),
         (
             KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE),
-            TuiCommand::PlayPause,
+            (TuiCommand::PlayPause, Some("play-pause")),
         ),
         (
             KeyEvent::new(KeyCode::Char('z'), KeyModifiers::NONE),
-            TuiCommand::PlayPrevious,
+            (TuiCommand::PlayPrevious, Some("play-prev")),
         ),
         (
             KeyEvent::new(KeyCode::Char('b'), KeyModifiers::NONE),
-            TuiCommand::PlayNext,
+            (TuiCommand::PlayNext, Some("play-prev")),
         ),
         (
             KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE),
-            TuiCommand::Scroll(1),
+            (TuiCommand::Scroll(1), Some("scroll +1")),
         ),
         (
             KeyEvent::new(KeyCode::Char('k'), KeyModifiers::NONE),
-            TuiCommand::Scroll(-1),
+            (TuiCommand::Scroll(-1), Some("scroll -1")),
         ),
         (
             KeyEvent::new(KeyCode::Char(':'), KeyModifiers::NONE),
-            TuiCommand::EnterCommandMode(true),
+            (TuiCommand::EnterCommandMode(true), None),
         ),
         (
             KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE),
-            TuiCommand::EnterCommandMode(false),
+            (TuiCommand::EnterCommandMode(false), None),
         ),
     ]);
     let mut tui_state = TuiState::Player;
@@ -250,6 +256,25 @@ pub fn tui(
                     cursor_position,
                 )?;
             }
+            TuiState::Help => {
+                let to_draw = generate_help_str(&commands);
+                draw(
+                    &mut terminal,
+                    &to_draw,
+                    scroll,
+                    if command_mode {
+                        Some(&command_text)
+                    } else {
+                        None
+                    },
+                    if command_error.trim().is_empty() {
+                        None
+                    } else {
+                        Some(&command_error)
+                    },
+                    cursor_position,
+                )?;
+            }
         };
 
         if event::poll(std::time::Duration::from_millis(16))? {
@@ -303,7 +328,7 @@ pub fn tui(
                         {
                             cursor_position += 1;
                         }
-                    } else if let Some(key_command) = commands.get(&key) {
+                    } else if let Some((key_command, _)) = commands.get(&key) {
                         command = Some(key_command.clone());
                     }
                     if let Some(command) = command {
@@ -484,4 +509,52 @@ fn secs_to_hms(seconds: u64) -> String {
     let s = seconds - h * 3600 - m * 60;
 
     format!("{h:02}:{m:02}:{s:02}")
+}
+
+pub fn generate_help_str(
+    commands: &std::collections::HashMap<KeyEvent, (TuiCommand, Option<&str>)>,
+) -> String {
+    let mut help_str = String::new();
+    let min_width = 12;
+
+    writeln!(help_str, "Keybindings:").unwrap();
+    let mut keybindings_help_str = vec![];
+    for (key_event, (_, description)) in commands {
+        let mut help_str = String::new();
+        if let Some(description) = description {
+            help_str += &match key_event.code {
+                KeyCode::Char(' ') => format!(
+                    "{:min_width$}  {:min_width$}  {description}",
+                    "global", "space"
+                ),
+
+                KeyCode::Char(c) => {
+                    format!(
+                        "{:min_width$}  {:min_width$}  {description}",
+                        "global",
+                        if key_event.modifiers == KeyModifiers::NONE {
+                            c.to_string()
+                        } else {
+                            format!("{c}+{}", key_event.modifiers.to_string())
+                        }
+                    )
+                }
+                key_code => format!(
+                    "{:min_width$}  {:min_width$}  {description}",
+                    "global",
+                    if key_event.modifiers == KeyModifiers::NONE {
+                        key_code.to_string()
+                    } else {
+                        format!("{key_code}+{}", key_event.modifiers.to_string())
+                    }
+                ),
+            };
+            keybindings_help_str.push(help_str);
+        }
+    }
+
+    keybindings_help_str.sort_unstable_by_key(|str| str.split("  ").last().unwrap().to_string());
+    help_str.push_str(&keybindings_help_str.join("\n"));
+
+    help_str
 }
