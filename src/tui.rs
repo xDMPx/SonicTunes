@@ -517,6 +517,53 @@ pub fn generate_help_str(
     let mut help_str = String::new();
     let min_width = 12;
 
+    writeln!(help_str, "Commands:").unwrap();
+    writeln!(help_str, "{:min_width$} {:min_width$}", "global", "quit, q").unwrap();
+    writeln!(
+        help_str,
+        "{:min_width$} {:min_width$}",
+        "global", "vol=[+|-]<i64>"
+    )
+    .unwrap();
+    writeln!(
+        help_str,
+        "{:min_width$} {:min_width$}",
+        "global", "seek=[+|-]<f64>"
+    )
+    .unwrap();
+    writeln!(
+        help_str,
+        "{:min_width$} {:min_width$}",
+        "global", "play-pause"
+    )
+    .unwrap();
+    writeln!(
+        help_str,
+        "{:min_width$} {:min_width$}",
+        "global", "play-next"
+    )
+    .unwrap();
+    writeln!(
+        help_str,
+        "{:min_width$} {:min_width$}",
+        "global", "play-prev"
+    )
+    .unwrap();
+    writeln!(
+        help_str,
+        "{:min_width$} {:min_width$}",
+        "global", "pause-after=<u64>"
+    )
+    .unwrap();
+    writeln!(
+        help_str,
+        "{:min_width$} {:min_width$}",
+        "global", "quit-after=<u64>"
+    )
+    .unwrap();
+
+    help_str.push('\n');
+
     writeln!(help_str, "Keybindings:").unwrap();
     let mut keybindings_help_str = vec![];
     for (key_event, (_, description)) in keybindings {
