@@ -24,6 +24,59 @@ pub enum TuiCommand {
     QuitAfter(u64),
 }
 
+fn get_commands() -> std::collections::HashMap<&'static str, fn(&[&str]) -> Option<TuiCommand>> {
+    fn quit(_: &[&str]) -> Option<TuiCommand> {
+        Some(TuiCommand::Quit)
+    }
+    fn seek(args: &[&str]) -> Option<TuiCommand> {
+        let offset: f64 = args.iter().next()?.parse().ok()?;
+        Some(TuiCommand::Seek(offset))
+    }
+    fn vol(args: &[&str]) -> Option<TuiCommand> {
+        let arg = args.iter().next()?;
+        if arg.starts_with('-') || arg.starts_with('+') {
+            let mut volume: i64 = arg.parse().ok()?;
+            volume = volume.clamp(-200, 200);
+            Some(TuiCommand::Volume(volume))
+        } else {
+            let mut volume: i64 = arg.parse().ok()?;
+            volume = volume.clamp(-200, 200);
+            Some(TuiCommand::SetVolume(volume))
+        }
+    }
+    fn playpause(_: &[&str]) -> Option<TuiCommand> {
+        Some(TuiCommand::PlayPause)
+    }
+    fn playnext(_: &[&str]) -> Option<TuiCommand> {
+        Some(TuiCommand::PlayNext)
+    }
+    fn playprev(_: &[&str]) -> Option<TuiCommand> {
+        Some(TuiCommand::PlayPrevious)
+    }
+    fn pauseafter(args: &[&str]) -> Option<TuiCommand> {
+        let time_min: u64 = args.iter().next()?.parse().ok()?;
+        Some(TuiCommand::PauseAfter(time_min))
+    }
+    fn quitafter(args: &[&str]) -> Option<TuiCommand> {
+        let time_min: u64 = args.iter().next()?.parse().ok()?;
+        Some(TuiCommand::QuitAfter(time_min))
+    }
+    type CmdFn = fn(&[&str]) -> Option<TuiCommand>;
+    let commands = std::collections::HashMap::from([
+        ("quit", quit as CmdFn),
+        ("q", quit as CmdFn),
+        ("vol", vol as CmdFn),
+        ("seek", seek as CmdFn),
+        ("play-pause", playpause as CmdFn),
+        ("play-next", playnext as CmdFn),
+        ("play-prev", playprev as CmdFn),
+        ("pause-after", pauseafter as CmdFn),
+        ("quit-after", quitafter as CmdFn),
+    ]);
+
+    commands
+}
+
 fn map_str_to_tuicommand(str: &str) -> Option<TuiCommand> {
     if str.split_whitespace().count() > 2 {
         return None;
@@ -31,39 +84,9 @@ fn map_str_to_tuicommand(str: &str) -> Option<TuiCommand> {
 
     let mut tokens = str.split_whitespace();
     let command_str = tokens.next()?;
-    let mut args = tokens;
+    let args: Vec<&str> = tokens.collect();
 
-    match command_str {
-        "quit" | "q" => Some(TuiCommand::Quit),
-        "vol" => {
-            let arg = args.next()?;
-            if arg.starts_with('-') || arg.starts_with('+') {
-                let mut volume: i64 = arg.parse().ok()?;
-                volume = volume.clamp(-200, 200);
-                Some(TuiCommand::Volume(volume))
-            } else {
-                let mut volume: i64 = arg.parse().ok()?;
-                volume = volume.clamp(-200, 200);
-                Some(TuiCommand::SetVolume(volume))
-            }
-        }
-        "seek" => {
-            let offset: f64 = args.next()?.parse().ok()?;
-            Some(TuiCommand::Seek(offset))
-        }
-        "play-pause" => Some(TuiCommand::PlayPause),
-        "play-next" => Some(TuiCommand::PlayNext),
-        "play-prev" => Some(TuiCommand::PlayPrevious),
-        "pause-after" => {
-            let time_min: u64 = args.next()?.parse().ok()?;
-            Some(TuiCommand::PauseAfter(time_min))
-        }
-        "quit-after" => {
-            let time_min: u64 = args.next()?.parse().ok()?;
-            Some(TuiCommand::QuitAfter(time_min))
-        }
-        _ => None,
-    }
+    get_commands().get(command_str).map(|f| f(&args))?
 }
 
 #[derive(Debug, Clone, PartialEq)]
