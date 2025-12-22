@@ -61,6 +61,16 @@ fn get_commands() -> std::collections::HashMap<&'static str, fn(&[&str]) -> Opti
         let time_min: u64 = args.iter().next()?.parse().ok()?;
         Some(TuiCommand::QuitAfter(time_min))
     }
+    fn view(args: &[&str]) -> Option<TuiCommand> {
+        let arg = args.iter().next()?;
+        match *arg {
+            "player" => Some(TuiCommand::State(TuiState::Player)),
+            "history" => Some(TuiCommand::State(TuiState::History)),
+            "help" => Some(TuiCommand::State(TuiState::Help)),
+            _ => None,
+        }
+    }
+
     type CmdFn = fn(&[&str]) -> Option<TuiCommand>;
     let commands = std::collections::HashMap::from([
         ("quit", quit as CmdFn),
@@ -72,6 +82,7 @@ fn get_commands() -> std::collections::HashMap<&'static str, fn(&[&str]) -> Opti
         ("play-prev", playprev as CmdFn),
         ("pause-after", pauseafter as CmdFn),
         ("quit-after", quitafter as CmdFn),
+        ("view", view as CmdFn),
     ]);
 
     commands
@@ -582,6 +593,12 @@ pub fn generate_help_str(
         help_str,
         "{:min_width$} {:min_width$}",
         "global", "quit-after=<u64>"
+    )
+    .unwrap();
+    writeln!(
+        help_str,
+        "{:min_width$} {:min_width$}",
+        "global", "view <player|history|help>"
     )
     .unwrap();
 
