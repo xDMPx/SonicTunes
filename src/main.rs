@@ -125,8 +125,8 @@ fn main() {
             sonictunes::tui::tui(libmpv_s.clone(), tui_r)
                 .map_err(|err| {
                     log::error!("Tui: {:?}", err);
-                    libmpv_s.send(LibMpvMessage::Quit).unwrap();
-                    mc_tui_s2.send(LibMpvEventMessage::Quit).unwrap();
+                    let _ = libmpv_s.send(LibMpvMessage::Quit);
+                    let _ = mc_tui_s2.send(LibMpvEventMessage::Quit);
                     err
                 })
                 .unwrap();
@@ -138,8 +138,8 @@ fn main() {
                 .run(mpv_client, &url, tui_s.clone(), mc_tui_s.clone(), libmpv_r)
                 .map_err(|err| {
                     log::error!("MpvHandler: {:?}", err);
-                    tui_s.send(LibMpvEventMessage::Quit).unwrap();
-                    mc_tui_s.send(LibMpvEventMessage::Quit).unwrap();
+                    let _ = tui_s.send(LibMpvEventMessage::Quit);
+                    let _ = mc_tui_s.send(LibMpvEventMessage::Quit);
                     err
                 })
                 .unwrap();
@@ -151,8 +151,8 @@ fn main() {
                 .handle_signals(mc_tui_r)
                 .map_err(|err| {
                     log::error!("MCOSInterface: {:?}", err);
-                    tui_s2.send(LibMpvEventMessage::Quit).unwrap();
-                    libmpv_s2.send(LibMpvMessage::Quit).unwrap();
+                    let _ = tui_s2.send(LibMpvEventMessage::Quit);
+                    let _ = libmpv_s2.send(LibMpvMessage::Quit);
                     err
                 })
                 .unwrap();
