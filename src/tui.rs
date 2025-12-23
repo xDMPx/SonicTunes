@@ -214,9 +214,22 @@ pub fn tui(
     let mut playback_volume = 0;
 
     let mut pause_after = None;
+    let mut pause_after_timer: Option<std::time::SystemTime> = None;
+    let mut pause_after_duration: Option<std::time::Duration> = None;
     let mut quit_after = None;
 
     loop {
+        let mut timer_text = None;
+        if let Some(pause_after_timer) = pause_after_timer {
+            let elapsed = pause_after_timer.elapsed();
+            let pause_after_duration = pause_after_duration.unwrap();
+            if let Ok(elapsed) = elapsed {
+                let pause_time_left: std::time::Duration =
+                    pause_after_duration.saturating_sub(elapsed);
+                timer_text = Some(format!("P: {}", secs_to_hms(pause_time_left.as_secs())));
+            }
+        }
+
         match tui_state {
             TuiState::Player => {
                 let playback_time = {
@@ -264,6 +277,7 @@ pub fn tui(
                         Some(&command_error)
                     },
                     cursor_position,
+                    timer_text.as_ref().map(|x| x.as_str()),
                 )?;
             }
             TuiState::History => {
@@ -275,6 +289,17 @@ pub fn tui(
                     };
                     to_draw.push_str(&format!("{x}\n"))
                 });
+                let mut timer_text = None;
+                if let Some(pause_after_timer) = pause_after_timer {
+                    let elapsed = pause_after_timer.elapsed();
+                    let pause_after_duration = pause_after_duration.unwrap();
+                    if let Ok(elapsed) = elapsed {
+                        let pause_time_left: std::time::Duration =
+                            pause_after_duration.saturating_sub(elapsed);
+                        timer_text = Some(format!("P: {}", secs_to_hms(pause_time_left.as_secs())));
+                    }
+                }
+
                 draw(
                     &mut terminal,
                     &to_draw,
@@ -290,6 +315,7 @@ pub fn tui(
                         Some(&command_error)
                     },
                     cursor_position,
+                    timer_text.as_ref().map(|x| x.as_str()),
                 )?;
             }
             TuiState::Help => {
@@ -309,6 +335,7 @@ pub fn tui(
                         Some(&command_error)
                     },
                     cursor_position,
+                    timer_text.as_ref().map(|x| x.as_str()),
                 )?;
             }
         };
@@ -409,6 +436,8 @@ pub fn tui(
                                 pause_after = Some(crossbeam::channel::after(
                                     std::time::Duration::from_mins(min),
                                 ));
+                                pause_after_duration = Some(std::time::Duration::from_mins(min));
+                                pause_after_timer = Some(std::time::SystemTime::now());
                                 quit_after = None;
                             }
                             TuiCommand::QuitAfter(min) => {
@@ -416,6 +445,8 @@ pub fn tui(
                                     std::time::Duration::from_mins(min),
                                 ));
                                 pause_after = None;
+                                pause_after_duration = None;
+                                pause_after_timer = None;
                             }
                         }
                     }
@@ -504,6 +535,7 @@ pub fn draw(
     command: Option<&str>,
     error: Option<&str>,
     cursor_position: u16,
+    timer_text: Option<&str>,
 ) -> Result<(), std::io::Error> {
     terminal.draw(|f| {
         let area = f.area();
@@ -533,6 +565,14 @@ pub fn draw(
                 inner.x + 1 + cursor_position,
                 inner.y,
             ));
+        }
+        if let Some(timer_text) = timer_text {
+            let text = ratatui::widgets::Paragraph::new(timer_text);
+            let mut inner = inner;
+            inner.y = inner.height;
+            inner.x = inner.width - timer_text.chars().count() as u16;
+            inner.height = 1;
+            f.render_widget(text, inner);
         }
     })?;
 
