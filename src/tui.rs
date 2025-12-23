@@ -217,6 +217,8 @@ pub fn tui(
     let mut pause_after_timer: Option<std::time::SystemTime> = None;
     let mut pause_after_duration: Option<std::time::Duration> = None;
     let mut quit_after = None;
+    let mut quit_after_timer: Option<std::time::SystemTime> = None;
+    let mut quit_after_duration: Option<std::time::Duration> = None;
 
     loop {
         let mut timer_text = None;
@@ -227,6 +229,15 @@ pub fn tui(
                 let pause_time_left: std::time::Duration =
                     pause_after_duration.saturating_sub(elapsed);
                 timer_text = Some(format!("P: {}", secs_to_hms(pause_time_left.as_secs())));
+            }
+        }
+        if let Some(quit_after_timer) = quit_after_timer {
+            let elapsed = quit_after_timer.elapsed();
+            let quit_after_duration = quit_after_duration.unwrap();
+            if let Ok(elapsed) = elapsed {
+                let quit_time_left: std::time::Duration =
+                    quit_after_duration.saturating_sub(elapsed);
+                timer_text = Some(format!("Q: {}", secs_to_hms(quit_time_left.as_secs())));
             }
         }
 
@@ -289,16 +300,6 @@ pub fn tui(
                     };
                     to_draw.push_str(&format!("{x}\n"))
                 });
-                let mut timer_text = None;
-                if let Some(pause_after_timer) = pause_after_timer {
-                    let elapsed = pause_after_timer.elapsed();
-                    let pause_after_duration = pause_after_duration.unwrap();
-                    if let Ok(elapsed) = elapsed {
-                        let pause_time_left: std::time::Duration =
-                            pause_after_duration.saturating_sub(elapsed);
-                        timer_text = Some(format!("P: {}", secs_to_hms(pause_time_left.as_secs())));
-                    }
-                }
 
                 draw(
                     &mut terminal,
@@ -439,11 +440,15 @@ pub fn tui(
                                 pause_after_duration = Some(std::time::Duration::from_mins(min));
                                 pause_after_timer = Some(std::time::SystemTime::now());
                                 quit_after = None;
+                                quit_after_duration = None;
+                                quit_after_timer = None;
                             }
                             TuiCommand::QuitAfter(min) => {
                                 quit_after = Some(crossbeam::channel::after(
                                     std::time::Duration::from_mins(min),
                                 ));
+                                quit_after_duration = Some(std::time::Duration::from_mins(min));
+                                quit_after_timer = Some(std::time::SystemTime::now());
                                 pause_after = None;
                                 pause_after_duration = None;
                                 pause_after_timer = None;
