@@ -22,6 +22,7 @@ pub enum TuiCommand {
     EnterCommandMode(bool),
     PauseAfter(u64),
     QuitAfter(u64),
+    Stop,
 }
 
 fn get_commands() -> std::collections::HashMap<
@@ -49,6 +50,9 @@ fn get_commands() -> std::collections::HashMap<
     }
     fn playpause(_: &mut std::str::SplitWhitespace<'_>) -> Option<TuiCommand> {
         Some(TuiCommand::PlayPause)
+    }
+    fn stop(_: &mut std::str::SplitWhitespace<'_>) -> Option<TuiCommand> {
+        Some(TuiCommand::Stop)
     }
     fn playnext(_: &mut std::str::SplitWhitespace<'_>) -> Option<TuiCommand> {
         Some(TuiCommand::PlayNext)
@@ -81,6 +85,7 @@ fn get_commands() -> std::collections::HashMap<
         ("vol", vol as CmdFn),
         ("seek", seek as CmdFn),
         ("play-pause", playpause as CmdFn),
+        ("stop", stop as CmdFn),
         ("play-next", playnext as CmdFn),
         ("play-prev", playprev as CmdFn),
         ("pause-after", pauseafter as CmdFn),
@@ -417,6 +422,9 @@ pub fn tui(
                             TuiCommand::PlayPause => {
                                 libmpv_s.send(LibMpvMessage::PlayPause)?;
                             }
+                            TuiCommand::Stop => {
+                                libmpv_s.send(LibMpvMessage::Stop)?;
+                            }
                             TuiCommand::PlayNext => {
                                 libmpv_s.send(LibMpvMessage::PlayNext)?;
                             }
@@ -618,6 +626,7 @@ pub fn generate_help_str(
         "global", "play-pause"
     )
     .unwrap();
+    writeln!(help_str, "{:min_width$} {:min_width$}", "global", "stop").unwrap();
     writeln!(
         help_str,
         "{:min_width$} {:min_width$}",

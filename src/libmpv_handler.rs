@@ -12,6 +12,7 @@ pub enum LibMpvMessage {
     PlayPause,
     PlayNext,
     PlayPrevious,
+    Stop,
 }
 
 #[derive(Debug)]
@@ -219,6 +220,10 @@ impl LibMpvHandler {
                     }
                     LibMpvMessage::Pause => {
                         self.mpv.set_property("pause", true)?;
+                    }
+                    LibMpvMessage::Stop => {
+                        self.mpv.set_property("pause", true)?;
+                        self.mpv.command("seek", &["0.0", "absolute"])?;
                     }
                     LibMpvMessage::PlayNext => {
                         if !ignore_playnext_until_load {
