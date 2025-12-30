@@ -190,7 +190,7 @@ pub fn tui(
                         Some(&command_error)
                     },
                     cursor_position,
-                    timer_text.as_ref().map(|x| x.as_str()),
+                    timer_text.as_deref(),
                 )?;
             }
             TuiState::History => {
@@ -218,7 +218,7 @@ pub fn tui(
                         Some(&command_error)
                     },
                     cursor_position,
-                    timer_text.as_ref().map(|x| x.as_str()),
+                    timer_text.as_deref(),
                 )?;
             }
             TuiState::Help => {
@@ -238,7 +238,7 @@ pub fn tui(
                         Some(&command_error)
                     },
                     cursor_position,
-                    timer_text.as_ref().map(|x| x.as_str()),
+                    timer_text.as_deref(),
                 )?;
             }
         };
