@@ -47,45 +47,43 @@ impl MCOSInterface {
         // The closure must be Send and have a static lifetime.
         media_controller.attach(move |event: souvlaki::MediaControlEvent| {
             log::debug!("MediaControlEvent: {event:?}");
+            let result;
             match event {
                 souvlaki::MediaControlEvent::Play => {
-                    libmpv_s.send(LibMpvMessage::Resume).unwrap();
+                    result = libmpv_s.send(LibMpvMessage::Resume);
                 }
                 souvlaki::MediaControlEvent::Pause => {
-                    libmpv_s.send(LibMpvMessage::Pause).unwrap();
+                    result = libmpv_s.send(LibMpvMessage::Pause);
                 }
                 souvlaki::MediaControlEvent::Previous => {
-                    libmpv_s.send(LibMpvMessage::PlayPrevious).unwrap();
+                    result = libmpv_s.send(LibMpvMessage::PlayPrevious);
                 }
                 souvlaki::MediaControlEvent::Next => {
-                    libmpv_s.send(LibMpvMessage::PlayNext).unwrap();
+                    result = libmpv_s.send(LibMpvMessage::PlayNext);
                 }
                 souvlaki::MediaControlEvent::Toggle => {
-                    libmpv_s.send(LibMpvMessage::PlayPause).unwrap();
+                    result = libmpv_s.send(LibMpvMessage::PlayPause);
                 }
                 souvlaki::MediaControlEvent::SetVolume(vol) => {
-                    libmpv_s
-                        .send(LibMpvMessage::SetVolume((vol * 100.0).floor() as i64))
-                        .unwrap();
+                    result = libmpv_s.send(LibMpvMessage::SetVolume((vol * 100.0).floor() as i64));
                 }
                 souvlaki::MediaControlEvent::SeekBy(direction, duration) => {
                     let offset = match direction {
                         souvlaki::SeekDirection::Forward => duration.as_secs_f64(),
                         souvlaki::SeekDirection::Backward => -duration.as_secs_f64(),
                     };
-                    libmpv_s
-                        .send(LibMpvMessage::UpdatePosition(offset))
-                        .unwrap();
+                    result = libmpv_s.send(LibMpvMessage::UpdatePosition(offset));
                 }
                 souvlaki::MediaControlEvent::SetPosition(pos) => {
-                    libmpv_s
-                        .send(LibMpvMessage::SetPosition(pos.0.as_secs_f64()))
-                        .unwrap();
+                    result = libmpv_s.send(LibMpvMessage::SetPosition(pos.0.as_secs_f64()));
                 }
                 souvlaki::MediaControlEvent::Stop => {
-                    libmpv_s.send(LibMpvMessage::Stop).unwrap();
+                    result = libmpv_s.send(LibMpvMessage::Stop);
                 }
-                _ => (),
+                _ => result = Ok(()),
+            }
+            if result.is_err() {
+                log::error!("{:?}", result.unwrap_err());
             }
         })?;
 
@@ -112,6 +110,7 @@ impl MCOSInterface {
 
         self.media_controller
             .set_playback(souvlaki::MediaPlayback::Playing { progress: None })?;
+
         loop {
             std::thread::sleep(std::time::Duration::from_millis(16));
             if let Ok(rec) = tui_r.try_recv() {
