@@ -80,27 +80,24 @@ fn view(args: &mut std::str::SplitWhitespace<'_>) -> Option<TuiCommand> {
     }
 }
 
-pub fn get_commands() -> std::collections::HashMap<
+type CmdFn = fn(&mut std::str::SplitWhitespace<'_>) -> Option<TuiCommand>;
+
+static COMMANDS: phf::Map<
     &'static str,
     fn(&mut std::str::SplitWhitespace<'_>) -> Option<TuiCommand>,
-> {
-    type CmdFn = fn(&mut std::str::SplitWhitespace<'_>) -> Option<TuiCommand>;
-    let commands = std::collections::HashMap::from([
-        ("quit", quit as CmdFn),
-        ("q", quit as CmdFn),
-        ("vol", vol as CmdFn),
-        ("seek", seek as CmdFn),
-        ("play-pause", playpause as CmdFn),
-        ("stop", stop as CmdFn),
-        ("play-next", playnext as CmdFn),
-        ("play-prev", playprev as CmdFn),
-        ("pause-after", pauseafter as CmdFn),
-        ("quit-after", quitafter as CmdFn),
-        ("view", view as CmdFn),
-    ]);
-
-    commands
-}
+> = phf::phf_map! {
+    "quit" => quit as CmdFn,
+    "q" => quit as CmdFn,
+    "vol" => vol as CmdFn,
+    "seek" => seek as CmdFn,
+    "play-pause" => playpause as CmdFn,
+    "stop" => stop as CmdFn,
+    "play-next" => playnext as CmdFn,
+    "play-prev" => playprev as CmdFn,
+    "pause-after" => pauseafter as CmdFn,
+    "quit-after" => quitafter as CmdFn,
+    "view" => view as CmdFn,
+};
 
 pub fn map_str_to_tuicommand(str: &str) -> Option<TuiCommand> {
     if str.split_whitespace().count() > 2 {
@@ -110,5 +107,5 @@ pub fn map_str_to_tuicommand(str: &str) -> Option<TuiCommand> {
     let mut tokens = str.split_whitespace();
     let command_str = tokens.next()?;
 
-    get_commands().get(command_str).map(|f| f(&mut tokens))?
+    COMMANDS.get(command_str).map(|f| f(&mut tokens))?
 }
