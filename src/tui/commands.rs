@@ -33,8 +33,21 @@ fn seek(args: &mut std::str::SplitWhitespace<'_>) -> Option<TuiCommand> {
         let offset: f64 = arg.parse().ok()?;
         Some(TuiCommand::Seek(offset))
     } else {
-        let offset: f64 = arg.parse().ok()?;
-        Some(TuiCommand::SetPosition(offset))
+        if let Some(pos) = arg.parse().ok() {
+            Some(TuiCommand::SetPosition(pos))
+        } else if arg.chars().filter(|&c| c == ':').count() == 2 {
+            let (hh, mmss) = arg.split_once(':')?;
+            let (mm, ss) = mmss.split_once(':')?;
+
+            let hh: f64 = hh.parse().ok()?;
+            let mm: f64 = mm.parse().ok()?;
+            let ss: f64 = ss.parse().ok()?;
+            let pos = (hh * 60.0 * 60.0) + (mm * 60.0) + ss;
+
+            Some(TuiCommand::SetPosition(pos))
+        } else {
+            None
+        }
     }
 }
 

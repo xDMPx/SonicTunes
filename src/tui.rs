@@ -253,7 +253,7 @@ pub fn tui(
                     if command_mode {
                         if key.code.to_string().len() == 1 {
                             let c = key.code.to_string().chars().next().unwrap();
-                            if c.is_alphanumeric() || c == '-' || c == '+' {
+                            if c.is_alphanumeric() || c == '-' || c == '+' || c == ':' {
                                 if cursor_position == command_text.len() as u16 {
                                     command_text.push(c);
                                 } else {
