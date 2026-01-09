@@ -5,6 +5,7 @@ pub enum TuiCommand {
     Volume(i64),
     SetVolume(i64),
     Seek(f64),
+    SetPosition(f64),
     PlayPause,
     PlayNext,
     PlayPrevious,
@@ -27,8 +28,14 @@ fn quit(_: &mut std::str::SplitWhitespace<'_>) -> Option<TuiCommand> {
 }
 
 fn seek(args: &mut std::str::SplitWhitespace<'_>) -> Option<TuiCommand> {
-    let offset: f64 = args.next()?.parse().ok()?;
-    Some(TuiCommand::Seek(offset))
+    let arg = args.next()?;
+    if arg.starts_with('-') || arg.starts_with('+') {
+        let offset: f64 = arg.parse().ok()?;
+        Some(TuiCommand::Seek(offset))
+    } else {
+        let offset: f64 = arg.parse().ok()?;
+        Some(TuiCommand::SetPosition(offset))
+    }
 }
 
 fn vol(args: &mut std::str::SplitWhitespace<'_>) -> Option<TuiCommand> {

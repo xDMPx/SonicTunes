@@ -79,7 +79,7 @@ pub fn tui(
         ),
         (
             KeyEvent::new(KeyCode::Char('b'), KeyModifiers::NONE),
-            (TuiCommand::PlayNext, Some("play-prev")),
+            (TuiCommand::PlayNext, Some("play-next")),
         ),
         (
             KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE),
@@ -315,6 +315,9 @@ pub fn tui(
                             }
                             TuiCommand::Seek(offset) => {
                                 libmpv_s.send(LibMpvMessage::UpdatePosition(offset))?;
+                            }
+                            TuiCommand::SetPosition(pos) => {
+                                libmpv_s.send(LibMpvMessage::SetPosition(pos))?;
                             }
                             TuiCommand::PlayPause => {
                                 libmpv_s.send(LibMpvMessage::PlayPause)?;
