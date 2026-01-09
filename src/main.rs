@@ -56,11 +56,11 @@ fn main() {
             let config_file_path = std::env::var("XDG_CONFIG_HOME")
                 .or(std::env::var("HOME").map(|s| format!("{s}/.config")))
                 .map(|path| format!("{path}/{}/config", env!("CARGO_PKG_NAME")));
-            if let Ok(path) = config_file_path {
-                if std::path::PathBuf::from(&path).is_file() {
-                    url = std::fs::read_to_string(path).ok();
-                    log::debug!("Config file: {:?}", url);
-                }
+            if let Ok(path) = config_file_path
+                && std::path::PathBuf::from(&path).is_file()
+            {
+                url = std::fs::read_to_string(path).ok();
+                log::debug!("Config file: {:?}", url);
             }
         }
     }
