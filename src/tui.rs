@@ -255,7 +255,7 @@ pub fn tui(
                 if let event::Event::Key(key) = event {
                     command_error = "".to_string();
                     if command_mode {
-                        if key.code != event::KeyCode::Tab {
+                        if key.code != event::KeyCode::Tab && key.code != event::KeyCode::BackTab {
                             command_suggestions_index = None;
                             command_suggestions = None;
                         }
@@ -302,7 +302,9 @@ pub fn tui(
                             && cursor_position < command_text.len() as u16
                         {
                             cursor_position += 1;
-                        } else if key.code == event::KeyCode::Tab {
+                        } else if key.code == event::KeyCode::Tab
+                            || key.code == event::KeyCode::BackTab
+                        {
                             if command_suggestions.is_none() {
                                 let suggestions = generate_completion_suggestions(&command_text);
                                 if !suggestions.is_empty() {
@@ -310,9 +312,15 @@ pub fn tui(
                                 }
                             }
                             if let Some(ref suggestions) = command_suggestions {
-                                let i = command_suggestions_index.map_or(0, |i| {
-                                    if i < suggestions.len() - 1 { i + 1 } else { 0 }
-                                });
+                                let i = if key.code == event::KeyCode::Tab {
+                                    command_suggestions_index.map_or(0, |i| {
+                                        if i < suggestions.len() - 1 { i + 1 } else { 0 }
+                                    })
+                                } else {
+                                    command_suggestions_index.map_or(suggestions.len() - 1, |i| {
+                                        if i != 0 { i - 1 } else { suggestions.len() - 1 }
+                                    })
+                                };
 
                                 command_suggestions_index = Some(i);
                                 let suggestion = suggestions.get(i).unwrap().to_owned();
