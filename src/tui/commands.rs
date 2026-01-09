@@ -127,3 +127,26 @@ pub fn map_str_to_tuicommand(str: &str) -> Option<TuiCommand> {
 
     COMMANDS.get(command_str).map(|f| f(&mut tokens))?
 }
+
+pub fn generate_completion_suggestions(command_text: &str) -> Vec<&'static str> {
+    let commands_names = COMMANDS.keys();
+
+    let mut suggestions = Vec::new();
+    for name in commands_names {
+        if let Some(dist) = calculate_insertion_distance(command_text, name) {
+            suggestions.push((name, dist));
+        }
+    }
+    suggestions.sort_by_key(|&(_, dist)| dist);
+
+    suggestions.iter().map(|&(name, _)| *name).collect()
+}
+
+fn calculate_insertion_distance(from: &str, to: &str) -> Option<u8> {
+    if !to.starts_with(from) {
+        return None;
+    }
+    let insertions = to.chars().skip(from.chars().count());
+
+    Some(insertions.count().try_into().ok()?)
+}

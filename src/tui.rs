@@ -2,7 +2,9 @@ mod commands;
 
 use crate::SonicTunesError;
 use crate::libmpv_handler::{LibMpvEventMessage, LibMpvMessage};
-use crate::tui::commands::{TuiCommand, TuiState, map_str_to_tuicommand};
+use crate::tui::commands::{
+    TuiCommand, TuiState, generate_completion_suggestions, map_str_to_tuicommand,
+};
 use ratatui::crossterm::event::{self, KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
     DefaultTerminal,
@@ -19,6 +21,8 @@ pub fn tui(
     let mut command_text = "".to_string();
     let mut command_error = "".to_string();
     let mut cursor_position: u16 = 0;
+    let mut command_suggestions: Option<Vec<&str>> = None;
+    let mut command_suggestions_index: Option<usize> = None;
 
     let keybindings = std::collections::HashMap::from([
         (
@@ -251,6 +255,11 @@ pub fn tui(
                 if let event::Event::Key(key) = event {
                     command_error = "".to_string();
                     if command_mode {
+                        if key.code != event::KeyCode::Tab {
+                            command_suggestions_index = None;
+                            command_suggestions = None;
+                        }
+
                         if key.code.to_string().len() == 1 {
                             let c = key.code.to_string().chars().next().unwrap();
                             if c.is_alphanumeric() || c == '-' || c == '+' || c == ':' {
@@ -293,6 +302,23 @@ pub fn tui(
                             && cursor_position < command_text.len() as u16
                         {
                             cursor_position += 1;
+                        } else if key.code == event::KeyCode::Tab {
+                            if command_suggestions.is_none() {
+                                let suggestions = generate_completion_suggestions(&command_text);
+                                if !suggestions.is_empty() {
+                                    command_suggestions = Some(suggestions);
+                                }
+                            }
+                            if let Some(ref suggestions) = command_suggestions {
+                                let i = command_suggestions_index.map_or(0, |i| {
+                                    if i < suggestions.len() - 1 { i + 1 } else { 0 }
+                                });
+
+                                command_suggestions_index = Some(i);
+                                let suggestion = suggestions.get(i).unwrap().to_owned();
+                                command_text = suggestion.to_string();
+                                cursor_position = command_text.len() as u16;
+                            }
                         }
                     } else if let Some((key_command, _)) = keybindings.get(&key) {
                         command = Some(key_command.clone());
