@@ -1,7 +1,7 @@
 use sonictunes::{
     PingResponse, ProgramOption, audiofile_to_url, get_random_audiofile,
     libmpv_handler::{LibMpvEventMessage, LibMpvHandler, LibMpvMessage},
-    print_help, process_args, reqwest_get,
+    print_help, process_args, reqwest_get, save_url_to_config,
 };
 
 fn main() {
@@ -46,24 +46,10 @@ fn main() {
         50
     };
 
-    let mut url = options.iter().find_map(|o| match o {
+    let url = options.iter().find_map(|o| match o {
         ProgramOption::URL(url) => Some(url.to_owned()),
         _ => None,
     });
-    if url.is_none() {
-        #[cfg(target_os = "linux")]
-        {
-            let config_file_path = std::env::var("XDG_CONFIG_HOME")
-                .or(std::env::var("HOME").map(|s| format!("{s}/.config")))
-                .map(|path| format!("{path}/{}/config", env!("CARGO_PKG_NAME")));
-            if let Ok(path) = config_file_path
-                && std::path::PathBuf::from(&path).is_file()
-            {
-                url = std::fs::read_to_string(path).ok();
-                log::debug!("Config file: {:?}", url);
-            }
-        }
-    }
     if url.is_none() {
         eprintln!("Invalid input");
         print_help();
@@ -86,19 +72,7 @@ fn main() {
         std::process::exit(-1);
     }
 
-    #[cfg(target_os = "linux")]
-    {
-        let config_dir_path = std::env::var("XDG_CONFIG_HOME")
-            .or(std::env::var("HOME").map(|s| format!("{s}/.config")))
-            .map(|path| format!("{path}/{}", env!("CARGO_PKG_NAME")));
-        if let Ok(dir_path) = config_dir_path {
-            if !std::path::PathBuf::from(&dir_path).is_dir() {
-                std::fs::create_dir(dir_path.clone()).unwrap();
-            }
-            let config_file_path = format!("{dir_path}/config");
-            std::fs::write(config_file_path, url.clone()).unwrap();
-        }
-    }
+    save_url_to_config(&url);
 
     let mut mpv_handler = LibMpvHandler::initialize_libmpv(volume).unwrap();
     let mpv_client = mpv_handler.create_client().unwrap();

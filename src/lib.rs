@@ -87,15 +87,26 @@ pub fn process_args() -> Result<Vec<ProgramOption>, SonicTunesError> {
     let mut options = vec![];
     let mut args: Vec<String> = std::env::args().skip(1).collect();
 
-    let last_arg = args.pop().ok_or(SonicTunesError::InvalidOptionsStructure)?;
-    if last_arg != "--help" {
-        let url = last_arg;
-        if url.starts_with("http") {
-            options.push(ProgramOption::URL(url));
-        }
-    } else {
-        args.push(last_arg);
+    let mut last_arg = args
+        .pop()
+        .or_else(|| load_url_from_config())
+        .ok_or(SonicTunesError::InvalidOptionsStructure)?;
+
+    if last_arg == "--help" {
+        options.push(ProgramOption::PrintHelp);
+        return Ok(options);
     }
+
+    if last_arg.starts_with("--") {
+        args.push(last_arg);
+        last_arg = load_url_from_config().ok_or(SonicTunesError::InvalidOptionsStructure)?;
+    }
+
+    let url = last_arg;
+    if !url.starts_with("http") {
+        return Err(SonicTunesError::InvalidOptionsStructure);
+    }
+    options.push(ProgramOption::URL(url));
 
     for arg in args {
         let arg = match arg.as_str() {
@@ -119,6 +130,42 @@ pub fn process_args() -> Result<Vec<ProgramOption>, SonicTunesError> {
 
     Ok(options)
 }
+
+#[cfg(target_os = "linux")]
+fn load_url_from_config() -> Option<String> {
+    let config_file_path = std::env::var("XDG_CONFIG_HOME")
+        .or(std::env::var("HOME").map(|s| format!("{s}/.config")))
+        .map(|path| format!("{path}/{}/config", env!("CARGO_PKG_NAME")));
+    if let Ok(path) = config_file_path {
+        if std::path::PathBuf::from(&path).is_file() {
+            return std::fs::read_to_string(path).ok();
+        }
+    }
+
+    None
+}
+
+#[cfg(target_os = "linux")]
+pub fn save_url_to_config(url: &str) {
+    let config_dir_path = std::env::var("XDG_CONFIG_HOME")
+        .or(std::env::var("HOME").map(|s| format!("{s}/.config")))
+        .map(|path| format!("{path}/{}", env!("CARGO_PKG_NAME")));
+    if let Ok(dir_path) = config_dir_path {
+        if !std::path::PathBuf::from(&dir_path).is_dir() {
+            std::fs::create_dir(dir_path.clone()).unwrap();
+        }
+        let config_file_path = format!("{dir_path}/config");
+        std::fs::write(config_file_path, url).unwrap();
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+fn load_url_from_config() -> Option<String> {
+    None
+}
+
+#[cfg(not(target_os = "linux"))]
+pub fn save_url_to_config(url: &str) {}
 
 pub fn print_help() {
     println!(
