@@ -1,4 +1,5 @@
 mod commands;
+mod keybindings;
 
 use crate::SonicTunesError;
 use crate::libmpv_handler::{LibMpvEventMessage, LibMpvMessage};
@@ -24,84 +25,7 @@ pub fn tui(
     let mut command_suggestions: Option<Vec<&str>> = None;
     let mut command_suggestions_index: Option<usize> = None;
 
-    let keybindings = std::collections::HashMap::from([
-        (
-            KeyEvent::new(KeyCode::Char('1'), KeyModifiers::NONE),
-            (TuiCommand::State(TuiState::Player), Some("view player")),
-        ),
-        (
-            KeyEvent::new(KeyCode::Char('2'), KeyModifiers::NONE),
-            (TuiCommand::State(TuiState::History), Some("view history")),
-        ),
-        (
-            KeyEvent::new(KeyCode::Char('0'), KeyModifiers::NONE),
-            (TuiCommand::State(TuiState::Help), Some("view help")),
-        ),
-        (
-            KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE),
-            (TuiCommand::Quit, Some("quit, q")),
-        ),
-        (
-            KeyEvent::new(KeyCode::Char('{'), KeyModifiers::NONE),
-            (TuiCommand::Volume(-1), Some("vol -1")),
-        ),
-        (
-            KeyEvent::new(KeyCode::Char('}'), KeyModifiers::NONE),
-            (TuiCommand::Volume(1), Some("vol +1")),
-        ),
-        (
-            KeyEvent::new(KeyCode::Char('['), KeyModifiers::NONE),
-            (TuiCommand::Volume(-10), Some("vol -10")),
-        ),
-        (
-            KeyEvent::new(KeyCode::Char(']'), KeyModifiers::NONE),
-            (TuiCommand::Volume(10), Some("vol +10")),
-        ),
-        (
-            KeyEvent::new(KeyCode::Left, KeyModifiers::NONE),
-            (TuiCommand::Seek(-10.0), Some("seek -10")),
-        ),
-        (
-            KeyEvent::new(KeyCode::Left, KeyModifiers::SHIFT),
-            (TuiCommand::Seek(-60.0), Some("seek -60")),
-        ),
-        (
-            KeyEvent::new(KeyCode::Right, KeyModifiers::NONE),
-            (TuiCommand::Seek(10.0), Some("seek +10")),
-        ),
-        (
-            KeyEvent::new(KeyCode::Right, KeyModifiers::SHIFT),
-            (TuiCommand::Seek(60.0), Some("seek -60")),
-        ),
-        (
-            KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE),
-            (TuiCommand::PlayPause, Some("play-pause")),
-        ),
-        (
-            KeyEvent::new(KeyCode::Char('z'), KeyModifiers::NONE),
-            (TuiCommand::PlayPrevious, Some("play-prev")),
-        ),
-        (
-            KeyEvent::new(KeyCode::Char('b'), KeyModifiers::NONE),
-            (TuiCommand::PlayNext, Some("play-next")),
-        ),
-        (
-            KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE),
-            (TuiCommand::Scroll(1), Some("scroll +1")),
-        ),
-        (
-            KeyEvent::new(KeyCode::Char('k'), KeyModifiers::NONE),
-            (TuiCommand::Scroll(-1), Some("scroll -1")),
-        ),
-        (
-            KeyEvent::new(KeyCode::Char(':'), KeyModifiers::NONE),
-            (TuiCommand::EnterCommandMode(true), None),
-        ),
-        (
-            KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE),
-            (TuiCommand::EnterCommandMode(false), None),
-        ),
-    ]);
+    let keybindings = keybindings::Keybindings::new();
     let mut tui_state = TuiState::Player;
 
     let mut title = String::new();
@@ -226,7 +150,7 @@ pub fn tui(
                 )?;
             }
             TuiState::Help => {
-                let to_draw = generate_help_str(&keybindings);
+                let to_draw = generate_help_str(&keybindings.map);
                 draw(
                     &mut terminal,
                     &to_draw,
@@ -328,7 +252,7 @@ pub fn tui(
                                 cursor_position = command_text.len() as u16;
                             }
                         }
-                    } else if let Some((key_command, _)) = keybindings.get(&key) {
+                    } else if let Some(key_command) = keybindings.map_keyevent_to_tuicommand(&key) {
                         command = Some(key_command.clone());
                     }
                     if let Some(command) = command {
