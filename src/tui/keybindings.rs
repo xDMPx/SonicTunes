@@ -92,4 +92,57 @@ impl Keybindings {
     pub fn map_keyevent_to_tuicommand(&self, event: &KeyEvent) -> Option<TuiCommand> {
         self.map.get(event).map(|(command, _)| command.clone())
     }
+
+    pub fn generate_help_str(&self, min_width: usize) -> String {
+        let keybindings = self
+            .map
+            .iter()
+            .filter_map(|(k, &(_, help_str))| help_str.map(|h| (k, h)));
+
+        let mut keybindings_help_str = vec![];
+        for (key_event, description) in keybindings {
+            let mut help_str = String::new();
+            help_str += &match key_event.code {
+                KeyCode::Char(' ') => format!(
+                    "{:min_width$}  {:min_width$}  {description}",
+                    "global", "space"
+                ),
+                KeyCode::Char(c) => {
+                    format!(
+                        "{:min_width$}  {:min_width$}  {description}",
+                        "global",
+                        if key_event.modifiers == KeyModifiers::NONE {
+                            c.to_string()
+                        } else {
+                            format!("{c}+{}", key_event.modifiers.to_string())
+                        }
+                    )
+                }
+                key_code => format!(
+                    "{:min_width$}  {:min_width$}  {description}",
+                    "global",
+                    if key_event.modifiers == KeyModifiers::NONE {
+                        key_code.to_string()
+                    } else {
+                        format!("{key_code}+{}", key_event.modifiers.to_string())
+                    }
+                ),
+            };
+            keybindings_help_str.push(help_str);
+        }
+
+        keybindings_help_str.sort_unstable_by_key(|str| {
+            str.split_once(' ')
+                .unwrap()
+                .1
+                .trim()
+                .split_once(' ')
+                .unwrap()
+                .1
+                .trim()
+                .to_string()
+        });
+
+        keybindings_help_str.join("\n")
+    }
 }

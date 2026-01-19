@@ -150,7 +150,10 @@ pub fn tui(
                 )?;
             }
             TuiState::Help => {
-                let to_draw = generate_help_str(&keybindings.map);
+                let min_width = 12;
+                let mut to_draw = generate_help_str(min_width);
+                writeln!(to_draw, "Keybindings:").unwrap();
+                writeln!(to_draw, "{}", keybindings.generate_help_str(min_width)).unwrap();
                 draw(
                     &mut terminal,
                     &to_draw,
@@ -458,11 +461,8 @@ fn secs_to_hms(seconds: u64) -> String {
     format!("{h:02}:{m:02}:{s:02}")
 }
 
-pub fn generate_help_str(
-    keybindings: &std::collections::HashMap<KeyEvent, (TuiCommand, Option<&str>)>,
-) -> String {
+pub fn generate_help_str(min_width: usize) -> String {
     let mut help_str = String::new();
-    let min_width = 12;
 
     writeln!(help_str, "Commands:").unwrap();
     writeln!(help_str, "{:min_width$} {:min_width$}", "global", "quit, q").unwrap();
@@ -517,45 +517,6 @@ pub fn generate_help_str(
     .unwrap();
 
     help_str.push('\n');
-
-    writeln!(help_str, "Keybindings:").unwrap();
-    let mut keybindings_help_str = vec![];
-    for (key_event, (_, description)) in keybindings {
-        let mut help_str = String::new();
-        if let Some(description) = description {
-            help_str += &match key_event.code {
-                KeyCode::Char(' ') => format!(
-                    "{:min_width$}  {:min_width$}  {description}",
-                    "global", "space"
-                ),
-
-                KeyCode::Char(c) => {
-                    format!(
-                        "{:min_width$}  {:min_width$}  {description}",
-                        "global",
-                        if key_event.modifiers == KeyModifiers::NONE {
-                            c.to_string()
-                        } else {
-                            format!("{c}+{}", key_event.modifiers.to_string())
-                        }
-                    )
-                }
-                key_code => format!(
-                    "{:min_width$}  {:min_width$}  {description}",
-                    "global",
-                    if key_event.modifiers == KeyModifiers::NONE {
-                        key_code.to_string()
-                    } else {
-                        format!("{key_code}+{}", key_event.modifiers.to_string())
-                    }
-                ),
-            };
-            keybindings_help_str.push(help_str);
-        }
-    }
-
-    keybindings_help_str.sort_unstable_by_key(|str| str.split("  ").last().unwrap().to_string());
-    help_str.push_str(&keybindings_help_str.join("\n"));
 
     help_str
 }
