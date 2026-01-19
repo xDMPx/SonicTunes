@@ -35,6 +35,7 @@ pub fn tui(
     let mut history: Vec<String> = Vec::new();
     let mut current: i64 = 0;
     let mut scroll: u16 = 0;
+    let mut scroll_to_center: bool = false;
 
     let mut playback_start = std::time::SystemTime::now();
     let mut playback_start_offset = 0.0;
@@ -106,7 +107,7 @@ pub fn tui(
                 draw(
                     &mut terminal,
                     &to_draw,
-                    0,
+                    &mut 0,
                     if command_mode {
                         Some(&command_text)
                     } else {
@@ -119,6 +120,7 @@ pub fn tui(
                     },
                     cursor_position,
                     timer_text.as_deref(),
+                    false,
                 )?;
             }
             TuiState::History => {
@@ -134,7 +136,7 @@ pub fn tui(
                 draw(
                     &mut terminal,
                     &to_draw,
-                    scroll,
+                    &mut scroll,
                     if command_mode {
                         Some(&command_text)
                     } else {
@@ -147,7 +149,9 @@ pub fn tui(
                     },
                     cursor_position,
                     timer_text.as_deref(),
+                    scroll_to_center,
                 )?;
+                scroll_to_center = false;
             }
             TuiState::Help => {
                 let min_width = 12;
@@ -157,7 +161,7 @@ pub fn tui(
                 draw(
                     &mut terminal,
                     &to_draw,
-                    scroll,
+                    &mut scroll,
                     if command_mode {
                         Some(&command_text)
                     } else {
@@ -170,6 +174,7 @@ pub fn tui(
                     },
                     cursor_position,
                     timer_text.as_deref(),
+                    false,
                 )?;
             }
         };
@@ -263,6 +268,7 @@ pub fn tui(
                         match command {
                             TuiCommand::State(state) => {
                                 tui_state = state.clone();
+                                scroll_to_center = true;
                             }
                             TuiCommand::Quit => {
                                 libmpv_s.send(LibMpvMessage::Quit)?;
@@ -405,11 +411,12 @@ pub fn tui(
 pub fn draw(
     terminal: &mut DefaultTerminal,
     text: &str,
-    scroll: u16,
+    scroll: &mut u16,
     command: Option<&str>,
     error: Option<&str>,
     cursor_position: u16,
     timer_text: Option<&str>,
+    scroll_to_center: bool,
 ) -> Result<(), std::io::Error> {
     terminal.draw(|f| {
         let area = f.area();
@@ -417,8 +424,19 @@ pub fn draw(
             .title(env!("CARGO_PKG_NAME"))
             .borders(Borders::ALL);
         let block = block.title_alignment(ratatui::layout::Alignment::Center);
+        if scroll_to_center {
+            if let Some((i, _)) = text.lines().enumerate().find(|(_, l)| l.starts_with('*')) {
+                let i = i as u16;
+                let inner = block.inner(f.area());
+                if i > (inner.height / 2) {
+                    *scroll = i - (inner.height / 2);
+                } else {
+                    *scroll = 0;
+                }
+            }
+        }
         let text = ratatui::widgets::Paragraph::new(text);
-        let text = text.scroll((scroll, 0));
+        let text = text.scroll((*scroll, 0));
         let inner = block.inner(f.area());
         f.render_widget(block, area);
         f.render_widget(text, inner);
